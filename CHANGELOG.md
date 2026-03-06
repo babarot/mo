@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.13.2](https://github.com/k1LoW/mo/compare/v0.13.1...v0.13.2) - 2026-03-06
+### New Features 🎉
+- feat: add --restart flag by @k1LoW in https://github.com/k1LoW/mo/pull/71
+
 ## [v0.13.1](https://github.com/k1LoW/mo/compare/v0.13.0...v0.13.1) - 2026-03-06
 ### New Features 🎉
 - feat: add `--unwatch` flag to remove watched glob patterns by @k1LoW in https://github.com/k1LoW/mo/pull/65
