@@ -983,8 +983,8 @@ export function MarkdownViewer({
 
   const toolbarButtons = (
     <div className="shrink-0 flex flex-col gap-2 -mr-4 -mt-4 sticky -top-4">
-      {isMarkdown && <TocToggle isTocOpen={isTocOpen} onToggle={onTocToggle} />}
       {isMarkdown && <EditToggle isEditing={isEditView} onToggle={handleToggleEdit} />}
+      {isMarkdown && <TocToggle isTocOpen={isTocOpen} onToggle={onTocToggle} />}
       {isMarkdown && <RawToggle isRaw={isRawView} onToggle={handleToggleRaw} />}
       <CopyButton content={content} />
       <CloseFileButton onClose={onRemoveFile} uploaded={uploaded} />
