@@ -145,6 +145,12 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
             onChange={(v) => update({ editorLineWrapping: v })}
           />
           <Toggle
+            label="Block cursor"
+            description="Use block cursor instead of line cursor"
+            checked={settings.editorBlockCursor}
+            onChange={(v) => update({ editorBlockCursor: v })}
+          />
+          <Toggle
             label="Auto save"
             description="Automatically save after 1 second of inactivity"
             checked={settings.editorAutoSave}

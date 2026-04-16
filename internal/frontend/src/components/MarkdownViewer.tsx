@@ -84,6 +84,7 @@ interface MarkdownViewerProps {
   editorLineWrapping?: boolean;
   editorAutoSave?: boolean;
   editorColorScheme?: string;
+  editorBlockCursor?: boolean;
   scrollContainer?: HTMLElement | null;
 }
 
@@ -620,6 +621,7 @@ export function MarkdownViewer({
   editorLineWrapping = true,
   editorAutoSave = false,
   editorColorScheme = "default",
+  editorBlockCursor = true,
   scrollContainer,
 }: MarkdownViewerProps) {
   const [content, setContent] = useState("");
@@ -997,6 +999,7 @@ export function MarkdownViewer({
             lineWrapping={editorLineWrapping}
             autoSave={editorAutoSave}
             colorScheme={editorColorScheme}
+            blockCursor={editorBlockCursor}
             initialLine={editAnchor?.line}
           />
         </div>

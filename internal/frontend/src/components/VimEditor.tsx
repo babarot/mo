@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
-import { EditorView } from "@codemirror/view";
-import { Compartment } from "@codemirror/state";
+import { EditorView, ViewPlugin } from "@codemirror/view";
+import type { ViewUpdate } from "@codemirror/view";
+import { Compartment, findClusterBreak } from "@codemirror/state";
 import { basicSetup } from "codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
@@ -18,11 +19,62 @@ interface VimEditorProps {
   autoSave?: boolean;
   initialLine?: number;
   colorScheme?: string;
+  blockCursor?: boolean;
 }
 
 function getCurrentMode(): "dark" | "light" {
   return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
 }
+
+const blockCursorStyle = EditorView.theme({
+  ".cm-cursor": {
+    borderLeftColor: "transparent !important",
+    borderLeft: "none !important",
+    backgroundColor: "currentColor",
+    opacity: "0.7",
+    width: "0.6em",
+  },
+});
+
+const blockCursorWidthPlugin = ViewPlugin.fromClass(
+  class {
+    view: EditorView;
+    constructor(view: EditorView) {
+      this.view = view;
+      requestAnimationFrame(() => this.adjustWidth());
+    }
+    update(update: ViewUpdate) {
+      if (update.selectionSet || update.docChanged || update.geometryChanged) {
+        requestAnimationFrame(() => this.adjustWidth());
+      }
+    }
+    adjustWidth() {
+      const { view } = this;
+      const pos = view.state.selection.main.head;
+      const line = view.state.doc.lineAt(pos);
+      let width = "";
+      if (pos < line.to) {
+        const nextPos = findClusterBreak(view.state.doc.sliceString(pos, line.to), 0, true) + pos;
+        const start = view.coordsAtPos(pos);
+        const end = view.coordsAtPos(nextPos);
+        if (start && end) {
+          const w = Math.abs(end.left - start.left);
+          if (w > 0) width = `${w}px`;
+        }
+      }
+      for (const el of view.dom.querySelectorAll<HTMLElement>(".cm-cursor")) {
+        el.style.width = width;
+      }
+    }
+    destroy() {
+      for (const el of this.view.dom.querySelectorAll<HTMLElement>(".cm-cursor")) {
+        el.style.width = "";
+      }
+    }
+  },
+);
+
+const blockCursorExtensions = [blockCursorStyle, blockCursorWidthPlugin];
 
 export interface VimEditorHandle {
   getCursorLine(): number;
@@ -38,6 +90,7 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
     autoSave = false,
     initialLine,
     colorScheme = "default",
+    blockCursor = true,
   },
   ref,
 ) {
@@ -53,6 +106,7 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
   }));
   const themeRef = useRef(new Compartment());
   const wrapRef = useRef(new Compartment());
+  const cursorRef = useRef(new Compartment());
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   savingRef.current = saving;
@@ -72,6 +126,7 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
 
     const themeCompartment = themeRef.current;
     const wrapCompartment = wrapRef.current;
+    const cursorCompartment = cursorRef.current;
     const initialTheme = getEditorTheme(colorSchemeRef.current, getCurrentMode());
 
     const view = new EditorView({
@@ -81,6 +136,7 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
         markdown({ base: markdownLanguage, codeLanguages: languages }),
         wrapCompartment.of(lineWrapping ? EditorView.lineWrapping : []),
         themeCompartment.of(initialTheme),
+        cursorCompartment.of(blockCursor ? blockCursorExtensions : []),
         EditorView.theme({
           "&": { height: "100%" },
           ".cm-scroller": { overflow: "auto" },
@@ -167,6 +223,15 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
     const newTheme = getEditorTheme(colorScheme, getCurrentMode());
     view.dispatch({ effects: themeRef.current.reconfigure(newTheme) });
   }, [colorScheme]);
+
+  // Dynamic block cursor toggle
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({
+      effects: cursorRef.current.reconfigure(blockCursor ? blockCursorExtensions : []),
+    });
+  }, [blockCursor]);
 
   // Dynamic line wrapping toggle
   useEffect(() => {

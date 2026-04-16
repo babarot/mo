@@ -483,6 +483,7 @@ export function App() {
                 editorLineWrapping={settings.editorLineWrapping}
                 editorAutoSave={settings.editorAutoSave}
                 editorColorScheme={settings.editorColorScheme}
+                editorBlockCursor={settings.editorBlockCursor}
                 onZoom={handleZoom}
                 scrollToHeading={pendingSearchHeading}
                 onScrolledToHeading={() => setPendingSearchHeading(null)}

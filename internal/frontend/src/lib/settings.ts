@@ -5,6 +5,7 @@ export interface Settings {
   editorLineWrapping: boolean;
   editorAutoSave: boolean;
   editorColorScheme: string;
+  editorBlockCursor: boolean;
 }
 
 const STORAGE_KEY = "mo-settings";
@@ -16,6 +17,7 @@ const defaults: Settings = {
   editorLineWrapping: true,
   editorAutoSave: false,
   editorColorScheme: "default",
+  editorBlockCursor: true,
 };
 
 export function loadSettings(): Settings {
