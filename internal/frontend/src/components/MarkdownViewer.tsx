@@ -22,6 +22,7 @@ import { resolveLink, resolveImageSrc, extractLanguage } from "../utils/resolve"
 import { parseFrontmatter } from "../utils/frontmatter";
 import { stripMdxSyntax } from "../utils/mdx";
 import { isMarkdownFile, detectLanguage } from "../utils/filetype";
+import { getShikiTheme } from "../lib/editorThemes";
 import type { ZoomContent } from "./ZoomModal";
 import type { TocHeading } from "./TocPanel";
 import type { Components } from "react-markdown";
@@ -563,19 +564,27 @@ function FrontmatterBlock({ yaml }: { yaml: string }) {
   );
 }
 
-function HighlightedView({ content, language }: { content: string; language: string }) {
+function HighlightedView({
+  content,
+  language,
+  shikiTheme = "github-dark",
+}: {
+  content: string;
+  language: string;
+  shikiTheme?: string;
+}) {
   const [html, setHtml] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     setHtml("");
-    codeToHtml(content, { lang: language, theme: "github-dark" })
+    codeToHtml(content, { lang: language, theme: shikiTheme })
       .then((result) => {
         if (!cancelled) setHtml(result);
       })
       .catch(() => {
         if (!cancelled) {
-          codeToHtml(content, { lang: "text", theme: "github-dark" })
+          codeToHtml(content, { lang: "text", theme: shikiTheme })
             .then((result) => {
               if (!cancelled) setHtml(result);
             })
@@ -585,10 +594,15 @@ function HighlightedView({ content, language }: { content: string; language: str
     return () => {
       cancelled = true;
     };
-  }, [content, language]);
+  }, [content, language, shikiTheme]);
 
   if (html) {
-    return <div className="[&_pre]:!rounded-none" dangerouslySetInnerHTML={{ __html: html }} />;
+    return (
+      <div
+        className="min-h-full [&_pre]:!rounded-none [&_pre]:min-h-full"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
   }
   return (
     <pre>
@@ -597,8 +611,39 @@ function HighlightedView({ content, language }: { content: string; language: str
   );
 }
 
-function RawView({ content }: { content: string }) {
-  return <HighlightedView content={content} language="markdown" />;
+function RawView({ content, shikiTheme }: { content: string; shikiTheme?: string }) {
+  return <HighlightedView content={content} language="markdown" shikiTheme={shikiTheme} />;
+}
+
+function RawFullscreen({
+  children,
+  onToggle,
+}: {
+  children: React.ReactNode;
+  onToggle: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const pre = el.querySelector("pre");
+    if (pre) {
+      el.style.backgroundColor = pre.style.backgroundColor || "";
+    }
+  });
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative h-full overflow-y-auto [&_pre]:!m-0 [&_pre]:!whitespace-pre-wrap [&_pre]:!break-words [&_pre]:!p-4 [&_pre]:!bg-transparent"
+    >
+      <div className="sticky top-4 float-right mr-4 z-10">
+        <RawToggle isRaw onToggle={onToggle} />
+      </div>
+      {children}
+    </div>
+  );
 }
 
 export function MarkdownViewer({
@@ -790,12 +835,23 @@ export function MarkdownViewer({
     [content, isRawView, isMarkdown],
   );
 
+  const currentShikiTheme = useMemo(() => {
+    const mode = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    return getShikiTheme(editorColorScheme, mode);
+  }, [editorColorScheme]);
+
   const renderedContent = useMemo(() => {
     if (!isMarkdown) {
-      return <HighlightedView content={content} language={codeLanguage!} />;
+      return (
+        <HighlightedView
+          content={content}
+          language={codeLanguage!}
+          shikiTheme={currentShikiTheme}
+        />
+      );
     }
     if (isRawView) {
-      return <RawView content={content} />;
+      return <RawView content={content} shikiTheme={currentShikiTheme} />;
     }
     const base = parsed ? parsed.content : content;
     const md = fileName.toLowerCase().endsWith(".mdx") ? stripMdxSyntax(base) : base;
@@ -818,7 +874,16 @@ export function MarkdownViewer({
         </Markdown>
       </>
     );
-  }, [content, isRawView, isMarkdown, codeLanguage, parsed, components, fileName]);
+  }, [
+    content,
+    isRawView,
+    isMarkdown,
+    codeLanguage,
+    parsed,
+    components,
+    fileName,
+    currentShikiTheme,
+  ]);
 
   const prevHeadingsKey = useRef("");
   useEffect(() => {
@@ -1014,16 +1079,7 @@ export function MarkdownViewer({
   }
 
   if (isRawView) {
-    return (
-      <div className="relative h-full overflow-y-auto">
-        <div className="min-h-full bg-gh-bg-secondary [&_pre]:!rounded-none [&_pre]:!m-0 [&_pre]:min-h-full [&_pre]:!whitespace-pre-wrap [&_pre]:!break-words [&_pre]:!p-4 [&_pre]:!bg-inherit">
-          {renderedContent}
-        </div>
-        <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-          <RawToggle isRaw={isRawView} onToggle={handleToggleRaw} />
-        </div>
-      </div>
-    );
+    return <RawFullscreen onToggle={handleToggleRaw}>{renderedContent}</RawFullscreen>;
   }
 
   return (

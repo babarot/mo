@@ -455,3 +455,18 @@ export function getEditorTheme(schemeName: string, mode: "dark" | "light"): Exte
   const scheme = getEditorScheme(schemeName);
   return buildTheme(scheme[mode]);
 }
+
+const SHIKI_THEME_MAP: Record<string, { dark: string; light: string }> = {
+  default: { dark: "github-dark", light: "github-light" },
+  "tokyo-night": { dark: "tokyo-night", light: "github-light" },
+  nord: { dark: "nord", light: "github-light" },
+  solarized: { dark: "solarized-dark", light: "solarized-light" },
+  dracula: { dark: "dracula", light: "github-light" },
+  catppuccin: { dark: "catppuccin-mocha", light: "catppuccin-latte" },
+  "rose-pine": { dark: "rose-pine", light: "rose-pine-dawn" },
+  gruvbox: { dark: "gruvbox-dark-medium", light: "gruvbox-light-medium" },
+};
+
+export function getShikiTheme(schemeName: string, mode: "dark" | "light"): string {
+  return SHIKI_THEME_MAP[schemeName]?.[mode] ?? SHIKI_THEME_MAP.default[mode];
+}

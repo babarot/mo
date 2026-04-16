@@ -21,7 +21,7 @@ This fork adds the following on top of the upstream `mo`:
   - Block cursor with dynamic width measurement for fullwidth CJK characters
   - Status bar with mode indicator, command line, and cursor position
   - Scroll position sync between view and edit modes
-- **Fullscreen raw view** — Raw Markdown source view fills the content area with syntax highlighting and word wrap.
+- **Fullscreen raw view** — Raw Markdown source view fills the content area with syntax highlighting, word wrap, and editor color scheme support (Shiki themes mapped from the selected color scheme).
 
 ## License
 
