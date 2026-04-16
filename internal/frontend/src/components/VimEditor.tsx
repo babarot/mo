@@ -238,6 +238,8 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
       });
     }
 
+    view.focus();
+
     // Watch for theme changes (dark/light mode toggle)
     const observer = new MutationObserver(() => {
       const newTheme = getEditorTheme(colorSchemeRef.current, getCurrentMode());
