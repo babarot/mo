@@ -1,5 +1,5 @@
 diff --git a/dist/index.cjs b/dist/index.cjs
-index 8ebd468f36519c154458d353415230265c7eb525..9d282a8f866b1b0be13b83a432571c88ba5350a6 100644
+index 8ebd468f36519c154458d353415230265c7eb525..cb1f00152a145214b34deed4b50e19f6751e49bd 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
 @@ -282,8 +282,19 @@ function attach(view, options = {}) {
@@ -22,8 +22,16 @@ index 8ebd468f36519c154458d353415230265c7eb525..9d282a8f866b1b0be13b83a432571c88
      syncViewport();
      if (e.ctrlKey) {
        const scrollKeys = {
+@@ -328,6 +339,7 @@ function attach(view, options = {}) {
+     getMode: () => ctx.mode,
+     getCursor: () => ({ ...ctx.cursor }),
+     getContent: () => buffer.getContent(),
++    getCommandLine: () => ctx.commandType ? ctx.commandType + ctx.commandBuffer : "",
+     destroy: () => {
+       target.removeEventListener("keydown", onKeyDown, { capture: true });
+       target.removeEventListener("compositionstart", onCompositionStart);
 diff --git a/dist/index.js b/dist/index.js
-index 0f433f473c0ba81b22bb6c59832b32a270d43fe2..f98b890f83eee4ff8c8e1c439e4450a0a1490f32 100644
+index 0f433f473c0ba81b22bb6c59832b32a270d43fe2..ba5038b71f9575ed3b03086a439d40a6680ca23c 100644
 --- a/dist/index.js
 +++ b/dist/index.js
 @@ -252,8 +252,19 @@ function attach(view, options = {}) {
@@ -46,3 +54,11 @@ index 0f433f473c0ba81b22bb6c59832b32a270d43fe2..f98b890f83eee4ff8c8e1c439e4450a0
      syncViewport();
      if (e.ctrlKey) {
        const scrollKeys = {
+@@ -298,6 +309,7 @@ function attach(view, options = {}) {
+     getMode: () => ctx.mode,
+     getCursor: () => ({ ...ctx.cursor }),
+     getContent: () => buffer.getContent(),
++    getCommandLine: () => ctx.commandType ? ctx.commandType + ctx.commandBuffer : "",
+     destroy: () => {
+       target.removeEventListener("keydown", onKeyDown, { capture: true });
+       target.removeEventListener("compositionstart", onCompositionStart);

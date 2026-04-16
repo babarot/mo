@@ -507,7 +507,7 @@ export function App() {
           />
         )}
       </div>
-      <RestartButton />
+      <RestartButton isEditing={isEditing} />
       {isDragging && <DropOverlay />}
       {zoomContent && <ZoomModal content={zoomContent} onClose={handleZoomClose} />}
       {settingsOpen && (

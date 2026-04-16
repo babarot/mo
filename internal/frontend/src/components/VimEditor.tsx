@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback } from "react";
 import { EditorView, ViewPlugin } from "@codemirror/view";
 import type { ViewUpdate } from "@codemirror/view";
 import { Compartment, findClusterBreak } from "@codemirror/state";
@@ -6,7 +6,7 @@ import { basicSetup } from "codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { attach } from "@vimee/plugin-codemirror";
-import type { VimAction } from "@vimee/core";
+import type { VimAction, VimMode } from "@vimee/core";
 import { saveFileContent } from "../hooks/useApi";
 import { getEditorTheme } from "../lib/editorThemes";
 
@@ -110,6 +110,14 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   savingRef.current = saving;
+  const [mode, setMode] = useState<VimMode>("normal");
+  const [commandLine, setCommandLine] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [statusError, setStatusError] = useState(false);
+  const [cursorPos, setCursorPos] = useState({ line: 0, col: 0 });
+  const [totalLines, setTotalLines] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- getCommandLine added via patch
+  const vimRef = useRef<any>(null);
 
   const activeGroupRef = useRef(activeGroup);
   activeGroupRef.current = activeGroup;
@@ -120,6 +128,18 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
   const colorSchemeRef = useRef(colorScheme);
   colorSchemeRef.current = colorScheme;
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const syncStatusBar = useCallback(() => {
+    const vim = vimRef.current;
+    const view = viewRef.current;
+    if (!vim || !view) return;
+    const cl = vim.getCommandLine?.() ?? "";
+    setCommandLine(cl);
+    const cursor = vim.getCursor();
+    setCursorPos({ line: cursor.line, col: cursor.col });
+    setTotalLines(view.state.doc.lines);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -178,15 +198,35 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
       onChange: (value: string) => {
         if (autoSaveRef.current) doAutoSave(value);
       },
+      onModeChange: (m: VimMode) => {
+        setMode(m);
+        if (m !== "command-line") setCommandLine("");
+      },
       onAction: (action: VimAction) => {
         if (action.type === "quit") {
           const line = view.state.doc.lineAt(view.state.selection.main.head).number - 1;
           onQuit(line);
         }
+        if (action.type === "status-message") {
+          const msg = action.message;
+          setStatusMessage(msg);
+          setStatusError(msg.startsWith("E"));
+          clearTimeout(statusTimerRef.current);
+          statusTimerRef.current = setTimeout(() => setStatusMessage(""), 3000);
+        }
+        syncStatusBar();
       },
     });
 
+    vimRef.current = vim;
     viewRef.current = view;
+    setTotalLines(view.state.doc.lines);
+
+    // Sync status bar after every keystroke.
+    // Registered on the same element with capture:true AFTER vimee's attach,
+    // so it runs after vimee's keydown handler (same phase, registration order).
+    const syncAfterKey = () => syncStatusBar();
+    view.contentDOM.addEventListener("keydown", syncAfterKey, { capture: true });
 
     // Scroll to initial line if specified
     if (initialLine != null && initialLine > 0) {
@@ -210,9 +250,12 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
 
     return () => {
       clearTimeout(autoSaveTimerRef.current);
+      clearTimeout(statusTimerRef.current);
+      view.contentDOM.removeEventListener("keydown", syncAfterKey, { capture: true });
       observer.disconnect();
       vim.destroy();
       view.destroy();
+      vimRef.current = null;
       viewRef.current = null;
     };
   }, []);
@@ -243,5 +286,38 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
     });
   }, [lineWrapping]);
 
-  return <div ref={containerRef} className="mo-vim-editor h-full overflow-hidden" />;
+  const modeLabel =
+    mode === "insert"
+      ? "-- INSERT --"
+      : mode === "visual"
+        ? "-- VISUAL --"
+        : mode === "visual-line"
+          ? "-- VISUAL LINE --"
+          : mode === "visual-block"
+            ? "-- VISUAL BLOCK --"
+            : "";
+
+  const leftStatus = commandLine || statusMessage || modeLabel;
+  const pct =
+    totalLines <= 1
+      ? "All"
+      : cursorPos.line === 0
+        ? "Top"
+        : cursorPos.line >= totalLines - 1
+          ? "Bot"
+          : `${Math.round(((cursorPos.line + 1) / totalLines) * 100)}%`;
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      <div ref={containerRef} className="mo-vim-editor flex-1 overflow-hidden" />
+      <div className="shrink-0 flex items-center justify-between px-3 py-0.5 text-xs font-mono bg-gh-bg-secondary text-gh-text-secondary border-t border-gh-border select-none">
+        <span className={statusError ? "text-red-400" : ""}>{leftStatus}</span>
+        <span>
+          {cursorPos.line + 1}:{cursorPos.col + 1}
+          {"  "}
+          {pct}
+        </span>
+      </div>
+    </div>
+  );
 });
