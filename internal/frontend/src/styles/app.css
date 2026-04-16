@@ -194,6 +194,12 @@ body,
   color: var(--fgColor-danger);
 }
 
+/* Vim editor (CodeMirror) integration */
+.mo-vim-editor .cm-editor {
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
+  font-size: 14px;
+}
+
 [data-theme="dark"] .markdown-body {
   color-scheme: dark;
   --fgColor-accent: #4493f8;

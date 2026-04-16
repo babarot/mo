@@ -126,6 +126,18 @@ export async function uploadFile(name: string, content: string, group: string): 
   }
 }
 
+export async function saveFileContent(group: string, id: string, content: string): Promise<void> {
+  const res = await fetch(`${groupPath(group)}/files/${id}/content`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text.trim() || "Failed to save file");
+  }
+}
+
 export async function restartServer(): Promise<void> {
   const res = await fetch("/_/api/restart", { method: "POST" });
   if (!res.ok) throw new Error("Failed to restart server");

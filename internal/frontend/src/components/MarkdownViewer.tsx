@@ -13,6 +13,8 @@ import mermaid from "mermaid";
 import { fetchFileContent, openRelativeFile } from "../hooks/useApi";
 import { escapeRegExp } from "../utils/regex";
 import { RawToggle } from "./RawToggle";
+import { EditToggle } from "./EditToggle";
+import { VimEditor } from "./VimEditor";
 import { TocToggle } from "./TocToggle";
 import { CopyButton } from "./CopyButton";
 import { CloseFileButton } from "./CloseFileButton";
@@ -544,16 +546,27 @@ export function MarkdownViewer({
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [isRawView, setIsRawView] = useState(false);
+  const [isEditView, setIsEditView] = useState(false);
   const [searchHitMarkers, setSearchHitMarkers] = useState<SearchHitMarker[]>([]);
   const articleRef = useRef<HTMLElement>(null);
   const [prevFetchKey, setPrevFetchKey] = useState({ fileId, revision });
 
-  if (fileId !== prevFetchKey.fileId || revision !== prevFetchKey.revision) {
+  if (fileId !== prevFetchKey.fileId) {
     setPrevFetchKey({ fileId, revision });
     setLoading(true);
+    if (isEditView) setIsEditView(false);
+  } else if (revision !== prevFetchKey.revision && !isEditView) {
+    setPrevFetchKey({ fileId, revision });
+    setLoading(true);
+  } else if (revision !== prevFetchKey.revision) {
+    // In edit mode, just update the key without triggering loading
+    setPrevFetchKey({ fileId, revision });
   }
 
   useEffect(() => {
+    // Skip re-fetching while in edit mode — the editor owns the content.
+    // When exiting edit mode, isEditView flips to false and triggers a re-fetch.
+    if (isEditView) return;
     let cancelled = false;
     fetchFileContent(activeGroup, fileId)
       .then((data) => {
@@ -571,7 +584,7 @@ export function MarkdownViewer({
     return () => {
       cancelled = true;
     };
-  }, [activeGroup, fileId, revision]);
+  }, [activeGroup, fileId, revision, isEditView]);
 
   const handleLinkClick = useCallback(
     async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -793,10 +806,52 @@ export function MarkdownViewer({
     };
   }, [loading, renderedContent, isMarkdown, isRawView, searchQuery]);
 
+  const handleToggleEdit = useCallback(() => {
+    setIsEditView((v) => {
+      if (!v) setIsRawView(false);
+      return !v;
+    });
+  }, []);
+
+  const handleQuitEditor = useCallback(() => {
+    setIsEditView(false);
+  }, []);
+
+  const handleToggleRaw = useCallback(() => {
+    if (isEditView) setIsEditView(false);
+    setIsRawView((v) => !v);
+  }, [isEditView]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-50 text-gh-text-secondary text-sm">
         Loading...
+      </div>
+    );
+  }
+
+  const toolbarButtons = (
+    <div className="shrink-0 flex flex-col gap-2 -mr-4 -mt-4 sticky -top-4">
+      {isMarkdown && <TocToggle isTocOpen={isTocOpen} onToggle={onTocToggle} />}
+      {isMarkdown && <EditToggle isEditing={isEditView} onToggle={handleToggleEdit} />}
+      {isMarkdown && <RawToggle isRaw={isRawView} onToggle={handleToggleRaw} />}
+      <CopyButton content={content} />
+      <CloseFileButton onClose={onRemoveFile} uploaded={uploaded} />
+    </div>
+  );
+
+  if (isEditView) {
+    return (
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <VimEditor
+            content={content}
+            activeGroup={activeGroup}
+            fileId={fileId}
+            onQuit={handleQuitEditor}
+          />
+        </div>
+        {toolbarButtons}
       </div>
     );
   }
@@ -822,12 +877,7 @@ export function MarkdownViewer({
         </div>
         {renderedContent}
       </article>
-      <div className="shrink-0 flex flex-col gap-2 -mr-4 -mt-4 sticky -top-4">
-        {isMarkdown && <TocToggle isTocOpen={isTocOpen} onToggle={onTocToggle} />}
-        {isMarkdown && <RawToggle isRaw={isRawView} onToggle={() => setIsRawView((v) => !v)} />}
-        <CopyButton content={content} />
-        <CloseFileButton onClose={onRemoveFile} uploaded={uploaded} />
-      </div>
+      {toolbarButtons}
     </div>
   );
 }

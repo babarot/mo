@@ -380,6 +380,40 @@ func (s *State) FindFile(id, groupName string) *FileEntry {
 	return nil
 }
 
+func (s *State) SaveFileContent(id, groupName, content string) error {
+	entry := s.FindFile(id, groupName)
+	if entry == nil {
+		return fmt.Errorf("file not found")
+	}
+
+	if entry.Uploaded {
+		head := content
+		if len(head) > headFileSizeLimit {
+			head = head[:headFileSizeLimit]
+		}
+		newTitle := extractTitle(head)
+
+		s.mu.Lock()
+		entry.content = content
+		if entry.Title != newTitle {
+			entry.Title = newTitle
+		}
+		s.mu.Unlock()
+
+		// Always send eventUpdate so markDirty() triggers a backup save.
+		// Without this, edited uploaded content would be lost on restart.
+		s.sendEvent(sseEvent{Name: eventUpdate, Data: "{}"})
+		s.notifyFileChanged([]string{id})
+		return nil
+	}
+
+	// Filesystem file: write to disk. fsnotify will fire file-changed SSE automatically.
+	if err := os.WriteFile(entry.Path, []byte(content), 0o644); err != nil { //nolint:gosec // Path is server-managed
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+	return nil
+}
+
 func (s *State) ReorderFiles(groupName string, fileIDs []string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -1158,6 +1192,10 @@ type uploadFileRequest struct {
 	Content string `json:"content"`
 }
 
+type saveFileContentRequest struct {
+	Content string `json:"content"`
+}
+
 type patternRequest struct {
 	Pattern string `json:"pattern"`
 	Group   string `json:"group"`
@@ -1227,6 +1265,7 @@ func NewHandler(state *State) http.Handler {
 	mux.HandleFunc("GET /_/api/groups", handleGroups(state))
 	mux.HandleFunc("PUT /_/api/groups/{group}/reorder", handleReorderFiles(state))
 	mux.HandleFunc("GET /_/api/groups/{group}/files/{id}/content", handleFileContent(state))
+	mux.HandleFunc("PUT /_/api/groups/{group}/files/{id}/content", handleSaveFileContent(state))
 	mux.HandleFunc("GET /_/api/search", handleSearch(state))
 	mux.HandleFunc("GET /_/api/groups/{group}/files/{id}/raw/{path...}", handleFileRaw(state))
 	mux.HandleFunc("POST /_/api/groups/{group}/files/open", handleOpenFile(state))
@@ -1460,6 +1499,47 @@ func handleFileContent(state *State) http.HandlerFunc {
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			slog.Error("failed to encode response", "error", err)
 		}
+	}
+}
+
+func handleSaveFileContent(state *State) http.HandlerFunc {
+	const maxRequestSize = 12 << 20 // 12MB (headroom for JSON envelope)
+	const maxContentSize = 10 << 20 // 10MB
+	return func(w http.ResponseWriter, r *http.Request) {
+		group, err := resolveGroupFromPath(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		id := r.PathValue("id")
+		if id == "" {
+			http.Error(w, "missing file id", http.StatusBadRequest)
+			return
+		}
+
+		r.Body = http.MaxBytesReader(w, r.Body, maxRequestSize)
+		var req saveFileContentRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			var maxBytesErr *http.MaxBytesError
+			if errors.As(err, &maxBytesErr) {
+				http.Error(w, "content too large (max 10MB)", http.StatusRequestEntityTooLarge)
+				return
+			}
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if len(req.Content) > maxContentSize {
+			http.Error(w, "content too large (max 10MB)", http.StatusRequestEntityTooLarge)
+			return
+		}
+
+		if err := state.SaveFileContent(id, group, req.Content); err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
