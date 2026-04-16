@@ -4,6 +4,7 @@ export interface Settings {
   wide: boolean;
   editorLineWrapping: boolean;
   editorAutoSave: boolean;
+  editorColorScheme: string;
 }
 
 const STORAGE_KEY = "mo-settings";
@@ -14,6 +15,7 @@ const defaults: Settings = {
   wide: false,
   editorLineWrapping: true,
   editorAutoSave: false,
+  editorColorScheme: "default",
 };
 
 export function loadSettings(): Settings {

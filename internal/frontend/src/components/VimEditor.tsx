@@ -4,10 +4,10 @@ import { Compartment } from "@codemirror/state";
 import { basicSetup } from "codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
-import { oneDark } from "@codemirror/theme-one-dark";
 import { attach } from "@vimee/plugin-codemirror";
 import type { VimAction } from "@vimee/core";
 import { saveFileContent } from "../hooks/useApi";
+import { getEditorTheme } from "../lib/editorThemes";
 
 interface VimEditorProps {
   content: string;
@@ -17,42 +17,28 @@ interface VimEditorProps {
   lineWrapping?: boolean;
   autoSave?: boolean;
   initialLine?: number;
+  colorScheme?: string;
 }
 
-function isDarkTheme(): boolean {
-  return document.documentElement.getAttribute("data-theme") === "dark";
+function getCurrentMode(): "dark" | "light" {
+  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
 }
-
-const lightTheme = EditorView.theme({
-  "&": {
-    backgroundColor: "#ffffff",
-    color: "#1f2328",
-  },
-  ".cm-gutters": {
-    backgroundColor: "#f6f8fa",
-    color: "#636c76",
-    borderRight: "1px solid #d0d7de",
-  },
-  ".cm-activeLineGutter": {
-    backgroundColor: "#e1e4e8",
-  },
-  ".cm-activeLine": {
-    backgroundColor: "#f6f8fa",
-  },
-  ".cm-cursor": {
-    borderLeftColor: "#1f2328",
-  },
-  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
-    backgroundColor: "rgba(9, 105, 218, 0.2) !important",
-  },
-});
 
 export interface VimEditorHandle {
   getCursorLine(): number;
 }
 
 export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function VimEditor(
-  { content, activeGroup, fileId, onQuit, lineWrapping = true, autoSave = false, initialLine },
+  {
+    content,
+    activeGroup,
+    fileId,
+    onQuit,
+    lineWrapping = true,
+    autoSave = false,
+    initialLine,
+    colorScheme = "default",
+  },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -77,6 +63,8 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
   fileIdRef.current = fileId;
   const autoSaveRef = useRef(autoSave);
   autoSaveRef.current = autoSave;
+  const colorSchemeRef = useRef(colorScheme);
+  colorSchemeRef.current = colorScheme;
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
@@ -84,7 +72,7 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
 
     const themeCompartment = themeRef.current;
     const wrapCompartment = wrapRef.current;
-    const initialTheme = isDarkTheme() ? oneDark : lightTheme;
+    const initialTheme = getEditorTheme(colorSchemeRef.current, getCurrentMode());
 
     const view = new EditorView({
       doc: content,
@@ -153,9 +141,9 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
       });
     }
 
-    // Watch for theme changes
+    // Watch for theme changes (dark/light mode toggle)
     const observer = new MutationObserver(() => {
-      const newTheme = isDarkTheme() ? oneDark : lightTheme;
+      const newTheme = getEditorTheme(colorSchemeRef.current, getCurrentMode());
       view.dispatch({ effects: themeCompartment.reconfigure(newTheme) });
     });
     observer.observe(document.documentElement, {
@@ -171,6 +159,14 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
       viewRef.current = null;
     };
   }, []);
+
+  // Dynamic color scheme switch
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const newTheme = getEditorTheme(colorScheme, getCurrentMode());
+    view.dispatch({ effects: themeRef.current.reconfigure(newTheme) });
+  }, [colorScheme]);
 
   // Dynamic line wrapping toggle
   useEffect(() => {

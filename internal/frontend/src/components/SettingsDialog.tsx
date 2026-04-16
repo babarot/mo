@@ -1,4 +1,6 @@
 import type { Settings } from "../lib/settings";
+import { getEffectiveTheme } from "../lib/settings";
+import { EDITOR_COLOR_SCHEMES } from "../lib/editorThemes";
 
 interface SettingsDialogProps {
   settings: Settings;
@@ -23,7 +25,13 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
             className="text-gh-text-secondary hover:text-gh-text cursor-pointer"
             onClick={onClose}
           >
-            <svg className="size-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+            <svg
+              className="size-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              viewBox="0 0 24 24"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
           </button>
@@ -82,6 +90,54 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
 
         {/* Editor */}
         <Section title="Editor">
+          {/* Color Scheme */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gh-text mb-2">Color scheme</label>
+            <div className="grid grid-cols-4 gap-2">
+              {EDITOR_COLOR_SCHEMES.map((scheme) => {
+                const mode = getEffectiveTheme(settings.theme);
+                const colors = scheme[mode];
+                const isActive = settings.editorColorScheme === scheme.name;
+                return (
+                  <button
+                    key={scheme.name}
+                    className={`rounded-md border p-2 cursor-pointer transition-all ${
+                      isActive
+                        ? "border-blue-500 ring-1 ring-blue-500"
+                        : "border-gh-border hover:border-gh-text-secondary"
+                    }`}
+                    onClick={() => update({ editorColorScheme: scheme.name })}
+                  >
+                    <div
+                      className="rounded h-7 mb-1 flex items-center gap-0.5 px-1.5 overflow-hidden"
+                      style={{ background: colors.bg }}
+                    >
+                      <div
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: colors.cursor }}
+                      />
+                      <div
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: colors.text }}
+                      />
+                      <div
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: colors.gutterText }}
+                      />
+                      <div
+                        className="flex-1 h-0.5 rounded ml-0.5"
+                        style={{ background: colors.activeLineBg }}
+                      />
+                    </div>
+                    <div className="text-[11px] text-center truncate text-gh-text-secondary">
+                      {scheme.label}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <Toggle
             label="Line wrapping"
             description="Wrap long lines at the editor edge"

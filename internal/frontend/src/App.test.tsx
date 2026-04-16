@@ -1,10 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import {
-  formatTitle,
-  getInitialTocOpenMap,
-  isTocOpenForFile,
-  TOC_OPEN_STORAGE_KEY,
-} from "./App";
+import { formatTitle, getInitialTocOpenMap, isTocOpenForFile, TOC_OPEN_STORAGE_KEY } from "./App";
 import { loadSettings } from "./lib/settings";
 
 describe("loadSettings", () => {

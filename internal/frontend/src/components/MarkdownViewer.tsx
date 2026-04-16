@@ -83,6 +83,7 @@ interface MarkdownViewerProps {
   searchQuery?: string | null;
   editorLineWrapping?: boolean;
   editorAutoSave?: boolean;
+  editorColorScheme?: string;
   scrollContainer?: HTMLElement | null;
 }
 
@@ -113,7 +114,11 @@ function stripInlineMarkdown(text: string): string {
 }
 
 /** Find a heading anchor in the source by text and occurrence index. */
-function findHeadingLine(content: string, headingText: string, occurrenceIndex: number): number | undefined {
+function findHeadingLine(
+  content: string,
+  headingText: string,
+  occurrenceIndex: number,
+): number | undefined {
   const lines = content.split("\n");
   let seen = 0;
   for (let i = 0; i < lines.length; i++) {
@@ -614,6 +619,7 @@ export function MarkdownViewer({
   searchQuery,
   editorLineWrapping = true,
   editorAutoSave = false,
+  editorColorScheme = "default",
   scrollContainer,
 }: MarkdownViewerProps) {
   const [content, setContent] = useState("");
@@ -892,14 +898,11 @@ export function MarkdownViewer({
   }, [loading, renderedContent, isMarkdown, isRawView, searchQuery]);
 
   /** Build anchor from editor cursor line (Edit → View). */
-  const anchorFromEditor = useCallback(
-    (): ScrollAnchor | null => {
-      const cursorLine = vimEditorRef.current?.getCursorLine();
-      if (cursorLine == null) return null;
-      return anchorFromSourceLine(content, cursorLine);
-    },
-    [content],
-  );
+  const anchorFromEditor = useCallback((): ScrollAnchor | null => {
+    const cursorLine = vimEditorRef.current?.getCursorLine();
+    if (cursorLine == null) return null;
+    return anchorFromSourceLine(content, cursorLine);
+  }, [content]);
 
   /** Build anchor from current viewport position (View → Edit). */
   const anchorFromView = useCallback((): ScrollAnchor | null => {
@@ -925,8 +928,10 @@ export function MarkdownViewer({
 
   /** Estimate source line from scroll ratio (fallback when no heading available). */
   const estimateLineFromScroll = useCallback((): number | undefined => {
-    if (!scrollContainer || scrollContainer.scrollHeight <= scrollContainer.clientHeight) return undefined;
-    const ratio = scrollContainer.scrollTop / (scrollContainer.scrollHeight - scrollContainer.clientHeight);
+    if (!scrollContainer || scrollContainer.scrollHeight <= scrollContainer.clientHeight)
+      return undefined;
+    const ratio =
+      scrollContainer.scrollTop / (scrollContainer.scrollHeight - scrollContainer.clientHeight);
     return Math.floor(ratio * content.split("\n").length);
   }, [content, scrollContainer]);
 
@@ -991,6 +996,7 @@ export function MarkdownViewer({
             onQuit={handleQuitEditor}
             lineWrapping={editorLineWrapping}
             autoSave={editorAutoSave}
+            colorScheme={editorColorScheme}
             initialLine={editAnchor?.line}
           />
         </div>
