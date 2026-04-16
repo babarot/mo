@@ -631,8 +631,8 @@ export function MarkdownViewer({
   const [isRawView, setIsRawView] = useState(false);
   const [isEditView, setIsEditView] = useState(false);
   useEffect(() => {
-    onEditStateChange?.(isEditView);
-  }, [isEditView, onEditStateChange]);
+    onEditStateChange?.(isEditView || isRawView);
+  }, [isEditView, isRawView, onEditStateChange]);
   const [editAnchor, setEditAnchor] = useState<ScrollAnchor | null>(null);
   const vimEditorRef = useRef<VimEditorHandle>(null);
   const [searchHitMarkers, setSearchHitMarkers] = useState<SearchHitMarker[]>([]);
@@ -1008,6 +1008,19 @@ export function MarkdownViewer({
         />
         <div className="absolute top-4 right-4 z-10">
           <EditToggle isEditing={isEditView} onToggle={handleToggleEdit} />
+        </div>
+      </div>
+    );
+  }
+
+  if (isRawView) {
+    return (
+      <div className="relative h-full overflow-y-auto">
+        <div className="min-h-full bg-gh-bg-secondary [&_pre]:!rounded-none [&_pre]:!m-0 [&_pre]:min-h-full [&_pre]:!whitespace-pre-wrap [&_pre]:!break-words [&_pre]:!p-4 [&_pre]:!bg-inherit">
+          {renderedContent}
+        </div>
+        <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+          <RawToggle isRaw={isRawView} onToggle={handleToggleRaw} />
         </div>
       </div>
     );

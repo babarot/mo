@@ -19,7 +19,9 @@ This fork adds the following on top of the upstream `mo`:
 - **In-browser Markdown editor** — Edit files directly in the browser with a fullscreen CodeMirror 6 + [vimee](https://github.com/vimeejs/vimee) Vim editor. Toggle with the edit button, `:q` to exit.
   - 8 color schemes (Default, Tokyo Night, Nord, Solarized, Dracula, Catppuccin, Rosé Pine, Gruvbox) with Markdown syntax highlighting
   - Block cursor with dynamic width measurement for fullwidth CJK characters
+  - Status bar with mode indicator, command line, and cursor position
   - Scroll position sync between view and edit modes
+- **Fullscreen raw view** — Raw Markdown source view fills the content area with syntax highlighting and word wrap.
 
 ## License
 
