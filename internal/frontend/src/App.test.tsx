@@ -1,29 +1,65 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
-  FONT_SIZE_STORAGE_KEY,
   formatTitle,
-  getInitialFontSize,
   getInitialTocOpenMap,
   isTocOpenForFile,
   TOC_OPEN_STORAGE_KEY,
 } from "./App";
+import { loadSettings } from "./lib/settings";
 
-describe("getInitialFontSize", () => {
+describe("loadSettings", () => {
   beforeEach(() => localStorage.clear());
   afterEach(() => localStorage.clear());
 
-  it("returns medium when localStorage is empty", () => {
-    expect(getInitialFontSize()).toBe("medium");
+  it("returns defaults when localStorage is empty", () => {
+    const s = loadSettings();
+    expect(s.theme).toBe("auto");
+    expect(s.fontSize).toBe("medium");
+    expect(s.wide).toBe(false);
+    expect(s.editorLineWrapping).toBe(true);
+    expect(s.editorAutoSave).toBe(false);
   });
 
-  it("returns stored size", () => {
-    localStorage.setItem(FONT_SIZE_STORAGE_KEY, "xlarge");
-    expect(getInitialFontSize()).toBe("xlarge");
+  it("returns stored settings", () => {
+    localStorage.setItem(
+      "mo-settings",
+      JSON.stringify({ theme: "dark", fontSize: "xlarge", wide: true }),
+    );
+    const s = loadSettings();
+    expect(s.theme).toBe("dark");
+    expect(s.fontSize).toBe("xlarge");
+    expect(s.wide).toBe(true);
   });
 
-  it("returns medium for invalid value", () => {
-    localStorage.setItem(FONT_SIZE_STORAGE_KEY, "huge");
-    expect(getInitialFontSize()).toBe("medium");
+  it("merges defaults for missing keys", () => {
+    localStorage.setItem("mo-settings", JSON.stringify({ theme: "light" }));
+    const s = loadSettings();
+    expect(s.theme).toBe("light");
+    expect(s.fontSize).toBe("medium");
+  });
+
+  it("migrates from legacy mo-theme key", () => {
+    localStorage.setItem("mo-theme", "dark");
+    const s = loadSettings();
+    expect(s.theme).toBe("dark");
+  });
+
+  it("migrates from legacy mo-font-size key", () => {
+    localStorage.setItem("mo-font-size", "large");
+    const s = loadSettings();
+    expect(s.fontSize).toBe("large");
+  });
+
+  it("migrates from legacy mo-layout-width key", () => {
+    localStorage.setItem("mo-layout-width", "wide");
+    const s = loadSettings();
+    expect(s.wide).toBe(true);
+  });
+
+  it("returns defaults for corrupted JSON", () => {
+    localStorage.setItem("mo-settings", "not-json");
+    const s = loadSettings();
+    expect(s.fontSize).toBe("medium");
   });
 });
 

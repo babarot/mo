@@ -14,6 +14,8 @@ interface VimEditorProps {
   activeGroup: string;
   fileId: string;
   onQuit: () => void;
+  lineWrapping?: boolean;
+  autoSave?: boolean;
 }
 
 function isDarkTheme(): boolean {
@@ -44,10 +46,18 @@ const lightTheme = EditorView.theme({
   },
 });
 
-export function VimEditor({ content, activeGroup, fileId, onQuit }: VimEditorProps) {
+export function VimEditor({
+  content,
+  activeGroup,
+  fileId,
+  onQuit,
+  lineWrapping = true,
+  autoSave = false,
+}: VimEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const themeRef = useRef(new Compartment());
+  const wrapRef = useRef(new Compartment());
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   savingRef.current = saving;
@@ -56,11 +66,15 @@ export function VimEditor({ content, activeGroup, fileId, onQuit }: VimEditorPro
   activeGroupRef.current = activeGroup;
   const fileIdRef = useRef(fileId);
   fileIdRef.current = fileId;
+  const autoSaveRef = useRef(autoSave);
+  autoSaveRef.current = autoSave;
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const themeCompartment = themeRef.current;
+    const wrapCompartment = wrapRef.current;
     const initialTheme = isDarkTheme() ? oneDark : lightTheme;
 
     const view = new EditorView({
@@ -68,7 +82,7 @@ export function VimEditor({ content, activeGroup, fileId, onQuit }: VimEditorPro
       extensions: [
         basicSetup,
         markdown({ base: markdownLanguage, codeLanguages: languages }),
-        EditorView.lineWrapping,
+        wrapCompartment.of(lineWrapping ? EditorView.lineWrapping : []),
         themeCompartment.of(initialTheme),
         EditorView.theme({
           "&": { height: "100%" },
@@ -78,6 +92,21 @@ export function VimEditor({ content, activeGroup, fileId, onQuit }: VimEditorPro
       ],
       parent: containerRef.current,
     });
+
+    const doAutoSave = (value: string) => {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = setTimeout(async () => {
+        if (savingRef.current) return;
+        setSaving(true);
+        try {
+          await saveFileContent(activeGroupRef.current, fileIdRef.current, value);
+        } catch {
+          // API error
+        } finally {
+          setSaving(false);
+        }
+      }, 1000);
+    };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- EditorView satisfies CodeMirrorView at runtime
     const vim = attach(view as any, {
@@ -91,6 +120,9 @@ export function VimEditor({ content, activeGroup, fileId, onQuit }: VimEditorPro
         } finally {
           setSaving(false);
         }
+      },
+      onChange: (value: string) => {
+        if (autoSaveRef.current) doAutoSave(value);
       },
       onAction: (action: VimAction) => {
         if (action.type === "quit") onQuit();
@@ -110,12 +142,22 @@ export function VimEditor({ content, activeGroup, fileId, onQuit }: VimEditorPro
     });
 
     return () => {
+      clearTimeout(autoSaveTimerRef.current);
       observer.disconnect();
       vim.destroy();
       view.destroy();
       viewRef.current = null;
     };
   }, []);
+
+  // Dynamic line wrapping toggle
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({
+      effects: wrapRef.current.reconfigure(lineWrapping ? EditorView.lineWrapping : []),
+    });
+  }, [lineWrapping]);
 
   return (
     <div

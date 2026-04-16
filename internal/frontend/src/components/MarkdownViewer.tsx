@@ -81,6 +81,8 @@ interface MarkdownViewerProps {
   scrollToHeading?: string | null;
   onScrolledToHeading?: () => void;
   searchQuery?: string | null;
+  editorLineWrapping?: boolean;
+  editorAutoSave?: boolean;
 }
 
 interface SearchHitMarker {
@@ -542,6 +544,8 @@ export function MarkdownViewer({
   scrollToHeading,
   onScrolledToHeading,
   searchQuery,
+  editorLineWrapping = true,
+  editorAutoSave = false,
 }: MarkdownViewerProps) {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
@@ -849,6 +853,8 @@ export function MarkdownViewer({
             activeGroup={activeGroup}
             fileId={fileId}
             onQuit={handleQuitEditor}
+            lineWrapping={editorLineWrapping}
+            autoSave={editorAutoSave}
           />
         </div>
         {toolbarButtons}
