@@ -86,6 +86,7 @@ interface MarkdownViewerProps {
   editorColorScheme?: string;
   editorBlockCursor?: boolean;
   scrollContainer?: HTMLElement | null;
+  onEditStateChange?: (editing: boolean) => void;
 }
 
 interface SearchHitMarker {
@@ -623,11 +624,15 @@ export function MarkdownViewer({
   editorColorScheme = "default",
   editorBlockCursor = true,
   scrollContainer,
+  onEditStateChange,
 }: MarkdownViewerProps) {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [isRawView, setIsRawView] = useState(false);
   const [isEditView, setIsEditView] = useState(false);
+  useEffect(() => {
+    onEditStateChange?.(isEditView);
+  }, [isEditView, onEditStateChange]);
   const [editAnchor, setEditAnchor] = useState<ScrollAnchor | null>(null);
   const vimEditorRef = useRef<VimEditorHandle>(null);
   const [searchHitMarkers, setSearchHitMarkers] = useState<SearchHitMarker[]>([]);
@@ -988,22 +993,22 @@ export function MarkdownViewer({
 
   if (isEditView) {
     return (
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <VimEditor
-            ref={vimEditorRef}
-            content={content}
-            activeGroup={activeGroup}
-            fileId={fileId}
-            onQuit={handleQuitEditor}
-            lineWrapping={editorLineWrapping}
-            autoSave={editorAutoSave}
-            colorScheme={editorColorScheme}
-            blockCursor={editorBlockCursor}
-            initialLine={editAnchor?.line}
-          />
+      <div className="relative h-full">
+        <VimEditor
+          ref={vimEditorRef}
+          content={content}
+          activeGroup={activeGroup}
+          fileId={fileId}
+          onQuit={handleQuitEditor}
+          lineWrapping={editorLineWrapping}
+          autoSave={editorAutoSave}
+          colorScheme={editorColorScheme}
+          blockCursor={editorBlockCursor}
+          initialLine={editAnchor?.line}
+        />
+        <div className="absolute top-4 right-4 z-10">
+          <EditToggle isEditing={isEditView} onToggle={handleToggleEdit} />
         </div>
-        {toolbarButtons}
       </div>
     );
   }

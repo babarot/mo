@@ -140,6 +140,7 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
         EditorView.theme({
           "&": { height: "100%" },
           ".cm-scroller": { overflow: "auto" },
+          ".cm-content": { paddingRight: "3.5rem" },
           "&.cm-focused": { outline: "none" },
         }),
       ],
@@ -242,10 +243,5 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
     });
   }, [lineWrapping]);
 
-  return (
-    <div
-      ref={containerRef}
-      className="mo-vim-editor h-full min-h-[400px] rounded-md overflow-hidden border border-gh-border"
-    />
-  );
+  return <div ref={containerRef} className="mo-vim-editor h-full overflow-hidden" />;
 });

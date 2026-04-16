@@ -92,6 +92,7 @@ export function App() {
   });
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const knownFileIds = useRef<Set<string>>(new Set());
   const [initialFileId, setInitialFileId] = useState<string | null>(() => {
     const fromUrl = parseFileIdFromSearch(window.location.search);
@@ -463,7 +464,7 @@ export function App() {
         <main className="flex-1 flex flex-col overflow-hidden">
           <div
             ref={setScrollContainer}
-            className="flex-1 overflow-y-auto overscroll-contain p-8 bg-gh-bg"
+            className={`flex-1 bg-gh-bg ${isEditing ? "overflow-hidden flex flex-col" : "overflow-y-auto overscroll-contain p-8"}`}
           >
             {activeFileId != null ? (
               <MarkdownViewer
@@ -484,6 +485,7 @@ export function App() {
                 editorAutoSave={settings.editorAutoSave}
                 editorColorScheme={settings.editorColorScheme}
                 editorBlockCursor={settings.editorBlockCursor}
+                onEditStateChange={setIsEditing}
                 onZoom={handleZoom}
                 scrollToHeading={pendingSearchHeading}
                 onScrolledToHeading={() => setPendingSearchHeading(null)}
