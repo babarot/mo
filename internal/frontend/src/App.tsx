@@ -472,6 +472,7 @@ export function App() {
                 scrollToHeading={pendingSearchHeading}
                 onScrolledToHeading={() => setPendingSearchHeading(null)}
                 searchQuery={searchQuery}
+                scrollContainer={scrollContainer}
               />
             ) : (
               <div className="flex items-center justify-center h-50 text-gh-text-secondary text-sm">
