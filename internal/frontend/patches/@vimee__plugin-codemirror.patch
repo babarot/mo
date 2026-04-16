@@ -1,0 +1,48 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index 8ebd468f36519c154458d353415230265c7eb525..9d282a8f866b1b0be13b83a432571c88ba5350a6 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -282,8 +282,19 @@ function attach(view, options = {}) {
+     ctx = { ...ctx, cursor: newCursor };
+     syncCursorToEditor(newCursor);
+   }
++  function syncCursorFromEditor() {
++    if (ctx.mode === "visual" || ctx.mode === "visual-line" || ctx.mode === "visual-block") {
++      return;
++    }
++    const offset = view.state.selection.main.head;
++    const editorCursor = offsetToCursor(buffer.getContent(), offset);
++    if (editorCursor.line !== ctx.cursor.line || editorCursor.col !== ctx.cursor.col) {
++      ctx = { ...ctx, cursor: editorCursor };
++    }
++  }
+   function onKeyDown(e) {
+     if (isComposing) return;
++    syncCursorFromEditor();
+     syncViewport();
+     if (e.ctrlKey) {
+       const scrollKeys = {
+diff --git a/dist/index.js b/dist/index.js
+index 0f433f473c0ba81b22bb6c59832b32a270d43fe2..f98b890f83eee4ff8c8e1c439e4450a0a1490f32 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -252,8 +252,19 @@ function attach(view, options = {}) {
+     ctx = { ...ctx, cursor: newCursor };
+     syncCursorToEditor(newCursor);
+   }
++  function syncCursorFromEditor() {
++    if (ctx.mode === "visual" || ctx.mode === "visual-line" || ctx.mode === "visual-block") {
++      return;
++    }
++    const offset = view.state.selection.main.head;
++    const editorCursor = offsetToCursor(buffer.getContent(), offset);
++    if (editorCursor.line !== ctx.cursor.line || editorCursor.col !== ctx.cursor.col) {
++      ctx = { ...ctx, cursor: editorCursor };
++    }
++  }
+   function onKeyDown(e) {
+     if (isComposing) return;
++    syncCursorFromEditor();
+     syncViewport();
+     if (e.ctrlKey) {
+       const scrollKeys = {

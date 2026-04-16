@@ -21,7 +21,10 @@
     },
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "patchedDependencies": {
+      "@vimee/plugin-codemirror": "patches/@vimee__plugin-codemirror.patch"
+    }
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.0",

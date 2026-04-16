@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@vimee/plugin-codemirror':
+    hash: 19c5d64397ab99bbe8b6d2fe8c22946b23d11089fa86a5007367f54779602331
+    path: patches/@vimee__plugin-codemirror.patch
+
 importers:
 
   .:
@@ -46,7 +51,7 @@ importers:
         version: 0.3.0
       '@vimee/plugin-codemirror':
         specifier: ^0.2.0
-        version: 0.2.0(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(@vimee/core@0.3.0)
+        version: 0.2.0(patch_hash=19c5d64397ab99bbe8b6d2fe8c22946b23d11089fa86a5007367f54779602331)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(@vimee/core@0.3.0)
       codemirror:
         specifier: ^6.0.2
         version: 6.0.2
@@ -3945,7 +3950,7 @@ snapshots:
 
   '@vimee/core@0.3.0': {}
 
-  '@vimee/plugin-codemirror@0.2.0(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(@vimee/core@0.3.0)':
+  '@vimee/plugin-codemirror@0.2.0(patch_hash=19c5d64397ab99bbe8b6d2fe8c22946b23d11089fa86a5007367f54779602331)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(@vimee/core@0.3.0)':
     dependencies:
       '@codemirror/state': 6.6.0
       '@codemirror/view': 6.41.0
