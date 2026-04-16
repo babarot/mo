@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
 import { EditorView } from "@codemirror/view";
 import { Compartment } from "@codemirror/state";
 import { basicSetup } from "codemirror";
@@ -13,9 +13,10 @@ interface VimEditorProps {
   content: string;
   activeGroup: string;
   fileId: string;
-  onQuit: () => void;
+  onQuit: (cursorLine?: number) => void;
   lineWrapping?: boolean;
   autoSave?: boolean;
+  initialLine?: number;
 }
 
 function isDarkTheme(): boolean {
@@ -46,16 +47,24 @@ const lightTheme = EditorView.theme({
   },
 });
 
-export function VimEditor({
-  content,
-  activeGroup,
-  fileId,
-  onQuit,
-  lineWrapping = true,
-  autoSave = false,
-}: VimEditorProps) {
+export interface VimEditorHandle {
+  getCursorLine(): number;
+}
+
+export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function VimEditor(
+  { content, activeGroup, fileId, onQuit, lineWrapping = true, autoSave = false, initialLine },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    getCursorLine() {
+      const view = viewRef.current;
+      if (!view) return 0;
+      return view.state.doc.lineAt(view.state.selection.main.head).number - 1;
+    },
+  }));
   const themeRef = useRef(new Compartment());
   const wrapRef = useRef(new Compartment());
   const [saving, setSaving] = useState(false);
@@ -125,11 +134,24 @@ export function VimEditor({
         if (autoSaveRef.current) doAutoSave(value);
       },
       onAction: (action: VimAction) => {
-        if (action.type === "quit") onQuit();
+        if (action.type === "quit") {
+          const line = view.state.doc.lineAt(view.state.selection.main.head).number - 1;
+          onQuit(line);
+        }
       },
     });
 
     viewRef.current = view;
+
+    // Scroll to initial line if specified
+    if (initialLine != null && initialLine > 0) {
+      const lineNum = Math.min(initialLine + 1, view.state.doc.lines);
+      const line = view.state.doc.line(lineNum);
+      view.dispatch({
+        selection: { anchor: line.from },
+        effects: EditorView.scrollIntoView(line.from, { y: "start" }),
+      });
+    }
 
     // Watch for theme changes
     const observer = new MutationObserver(() => {
@@ -165,4 +187,4 @@ export function VimEditor({
       className="mo-vim-editor h-full min-h-[400px] rounded-md overflow-hidden border border-gh-border"
     />
   );
-}
+});

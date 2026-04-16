@@ -14,7 +14,7 @@ import { fetchFileContent, openRelativeFile } from "../hooks/useApi";
 import { escapeRegExp } from "../utils/regex";
 import { RawToggle } from "./RawToggle";
 import { EditToggle } from "./EditToggle";
-import { VimEditor } from "./VimEditor";
+import { VimEditor, type VimEditorHandle } from "./VimEditor";
 import { TocToggle } from "./TocToggle";
 import { CopyButton } from "./CopyButton";
 import { CloseFileButton } from "./CloseFileButton";
@@ -88,6 +88,34 @@ interface MarkdownViewerProps {
 interface SearchHitMarker {
   top: number;
   height: number;
+}
+
+/** Strip inline Markdown formatting to get plain text for heading comparison. */
+function stripInlineMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "$1") // bold
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/\*(.+?)\*/g, "$1") // italic
+    .replace(/_(.+?)_/g, "$1")
+    .replace(/~~(.+?)~~/g, "$1") // strikethrough
+    .replace(/`(.+?)`/g, "$1") // inline code
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // links
+    .replace(/\s+#+\s*$/, "") // trailing hashes
+    .trim();
+}
+
+/** Find the source line number matching a heading's plain text. Handles duplicates by index. */
+function findHeadingLine(content: string, headingText: string, occurrenceIndex: number): number | undefined {
+  const lines = content.split("\n");
+  let seen = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^#{1,6}\s+(.*)/);
+    if (m && stripInlineMarkdown(m[1]) === headingText) {
+      if (seen === occurrenceIndex) return i;
+      seen++;
+    }
+  }
+  return undefined;
 }
 
 const SEARCH_HIT_COLUMN_OFFSET = -24;
@@ -551,6 +579,9 @@ export function MarkdownViewer({
   const [loading, setLoading] = useState(true);
   const [isRawView, setIsRawView] = useState(false);
   const [isEditView, setIsEditView] = useState(false);
+  const [editorInitialLine, setEditorInitialLine] = useState<number | undefined>(undefined);
+  const [scrollToHeadingOnQuit, setScrollToHeadingOnQuit] = useState<string | null>(null);
+  const vimEditorRef = useRef<VimEditorHandle>(null);
   const [searchHitMarkers, setSearchHitMarkers] = useState<SearchHitMarker[]>([]);
   const articleRef = useRef<HTMLElement>(null);
   const [prevFetchKey, setPrevFetchKey] = useState({ fileId, revision });
@@ -784,6 +815,19 @@ export function MarkdownViewer({
     }
   }, [loading, renderedContent, scrollToHeading, onScrolledToHeading]);
 
+  // Scroll to heading when returning from edit mode
+  useLayoutEffect(() => {
+    if (loading || isEditView || !scrollToHeadingOnQuit || !articleRef.current) return;
+    const headingEls = articleRef.current.querySelectorAll("h1, h2, h3, h4, h5, h6");
+    const target = Array.from(headingEls).find(
+      (el) => (el.textContent ?? "").trim() === scrollToHeadingOnQuit,
+    );
+    if (target) {
+      target.scrollIntoView({ behavior: "auto", block: "start" });
+    }
+    setScrollToHeadingOnQuit(null);
+  }, [loading, isEditView, scrollToHeadingOnQuit, renderedContent]);
+
   useLayoutEffect(() => {
     if (loading || !articleRef.current || !isMarkdown || isRawView || !searchQuery?.trim()) {
       setSearchHitMarkers([]);
@@ -810,16 +854,77 @@ export function MarkdownViewer({
     };
   }, [loading, renderedContent, isMarkdown, isRawView, searchQuery]);
 
+  const syncEditToView = useCallback(
+    (cursorLine?: number) => {
+      if (cursorLine != null) {
+        const lines = content.split("\n");
+        for (let i = Math.min(cursorLine, lines.length - 1); i >= 0; i--) {
+          const m = lines[i].match(/^#{1,6}\s+(.*)/);
+          if (m) {
+            setScrollToHeadingOnQuit(stripInlineMarkdown(m[1]));
+            break;
+          }
+        }
+      }
+    },
+    [content],
+  );
+
   const handleToggleEdit = useCallback(() => {
     setIsEditView((v) => {
-      if (!v) setIsRawView(false);
+      if (v) {
+        // Edit → View: sync position before closing
+        const cursorLine = vimEditorRef.current?.getCursorLine();
+        syncEditToView(cursorLine);
+      }
+      if (!v) {
+        setIsRawView(false);
+        let targetLine: number | undefined;
+
+        // 1. Find the nearest heading visible in the viewport (read DOM directly)
+        if (articleRef.current) {
+          const headingEls = articleRef.current.querySelectorAll("h1, h2, h3, h4, h5, h6");
+          let nearest: Element | null = null;
+          for (const el of headingEls) {
+            if (el.getBoundingClientRect().top <= window.innerHeight / 3) {
+              nearest = el;
+            }
+          }
+          if (nearest) {
+            const text = (nearest.textContent ?? "").trim();
+            // Count which occurrence of this heading text it is in the DOM
+            let occurrence = 0;
+            for (const el of headingEls) {
+              if (el === nearest) break;
+              if ((el.textContent ?? "").trim() === text) occurrence++;
+            }
+            targetLine = findHeadingLine(content, text, occurrence);
+          }
+        }
+
+        // 2. Fallback: estimate line from scroll ratio
+        if (targetLine == null) {
+          const scroller = articleRef.current?.closest("[class*='overflow-y']") as HTMLElement | null;
+          if (scroller && scroller.scrollHeight > scroller.clientHeight) {
+            const ratio = scroller.scrollTop / (scroller.scrollHeight - scroller.clientHeight);
+            const totalLines = content.split("\n").length;
+            targetLine = Math.floor(ratio * totalLines);
+          }
+        }
+
+        setEditorInitialLine(targetLine);
+      }
       return !v;
     });
-  }, []);
+  }, [content, syncEditToView]);
 
-  const handleQuitEditor = useCallback(() => {
-    setIsEditView(false);
-  }, []);
+  const handleQuitEditor = useCallback(
+    (cursorLine?: number) => {
+      setIsEditView(false);
+      syncEditToView(cursorLine);
+    },
+    [syncEditToView],
+  );
 
   const handleToggleRaw = useCallback(() => {
     if (isEditView) setIsEditView(false);
@@ -849,12 +954,14 @@ export function MarkdownViewer({
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <VimEditor
+            ref={vimEditorRef}
             content={content}
             activeGroup={activeGroup}
             fileId={fileId}
             onQuit={handleQuitEditor}
             lineWrapping={editorLineWrapping}
             autoSave={editorAutoSave}
+            initialLine={editorInitialLine}
           />
         </div>
         {toolbarButtons}
