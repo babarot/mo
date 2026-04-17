@@ -26,8 +26,10 @@ This fork adds the following on top of the upstream `mo`:
 - **Sidebar** — Improved sidebar with contextual controls.
   - Toolbar with view mode, title display, and search toggles inside the sidebar
   - Overlay mode: sidebar floats over content and auto-closes on file select or outside click
-- **Floating ToC** — Table of contents floats over content as a rounded card, auto-closes on outside click.
-- **Settings dialog** — Centralized configuration UI for theme, font size, layout width, sidebar overlay, floating ToC, and editor options.
+- **Table of Contents** — Enhanced ToC navigation.
+  - Floating mode: ToC floats over content as a rounded card, auto-closes on outside click
+  - Instant heading jump: optional instant scroll (no animation) via smooth scroll toggle
+- **Settings dialog** — Centralized configuration UI for theme, font size, layout width, sidebar overlay, floating ToC, smooth scroll, and editor options.
 
 ## License
 

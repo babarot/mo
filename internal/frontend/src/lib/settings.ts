@@ -4,6 +4,7 @@ export interface Settings {
   wide: boolean;
   sidebarOverlay: boolean;
   tocFloating: boolean;
+  smoothScroll: boolean;
   editorLineWrapping: boolean;
   editorAutoSave: boolean;
   editorColorScheme: string;
@@ -18,6 +19,7 @@ const defaults: Settings = {
   wide: false,
   sidebarOverlay: false,
   tocFloating: false,
+  smoothScroll: true,
   editorLineWrapping: true,
   editorAutoSave: false,
   editorColorScheme: "default",
