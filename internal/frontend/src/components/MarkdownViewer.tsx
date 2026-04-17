@@ -468,7 +468,7 @@ function ZoomButton({
 
 const darkButtonStyle = "border-[#484f58] hover:border-[#8b949e] text-[#8b949e] bg-[#2d333b]";
 const themedButtonStyle =
-  "border-gh-border hover:border-gh-text-secondary text-gh-text-secondary bg-gh-bg-secondary";
+  "border-gh-border/50 hover:border-gh-border text-gh-text-secondary bg-gh-bg-secondary";
 
 function CodeBlockCopyButton({ code, themed = false }: { code: string; themed?: boolean }) {
   const [copied, setCopied] = useState(false);
@@ -509,21 +509,24 @@ function CodeBlockCopyButton({ code, themed = false }: { code: string; themed?: 
   );
 }
 
+const shikiDualThemes = { light: "github-light" as const, dark: "github-dark" as const };
+
 function CodeBlock({ language, code }: { language: string; code: string }) {
   const [html, setHtml] = useState("");
 
   useEffect(() => {
     let cancelled = false;
-    codeToHtml(code, { lang: language, theme: "github-dark" })
+    const stripPreBg = (h: string) =>
+      h.replace(/(<pre[^>]*?) style="[^"]*"/, "$1");
+    codeToHtml(code, { lang: language, themes: shikiDualThemes, defaultColor: false })
       .then((result) => {
-        if (!cancelled) setHtml(result);
+        if (!cancelled) setHtml(stripPreBg(result));
       })
       .catch(() => {
-        // Fallback: if language not supported, try plaintext
         if (!cancelled) {
-          codeToHtml(code, { lang: "text", theme: "github-dark" })
+          codeToHtml(code, { lang: "text", themes: shikiDualThemes, defaultColor: false })
             .then((result) => {
-              if (!cancelled) setHtml(result);
+              if (!cancelled) setHtml(stripPreBg(result));
             })
             .catch(() => {});
         }
@@ -535,18 +538,18 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
 
   if (html) {
     return (
-      <div className="relative group">
+      <div className="relative group my-2">
         <div dangerouslySetInnerHTML={{ __html: html }} />
-        <CodeBlockCopyButton code={code} />
+        <CodeBlockCopyButton code={code} themed />
       </div>
     );
   }
   return (
-    <div className="relative group">
+    <div className="relative group my-2">
       <pre>
         <code>{code}</code>
       </pre>
-      <CodeBlockCopyButton code={code} />
+      <CodeBlockCopyButton code={code} themed />
     </div>
   );
 }

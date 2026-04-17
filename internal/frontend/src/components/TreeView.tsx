@@ -178,7 +178,7 @@ function TreeNodeItem({
     <div>
       <button
         className="flex items-center gap-1.5 w-full px-3 py-1.5 border-none cursor-pointer text-left text-sm bg-transparent text-gh-text-secondary hover:bg-gh-bg-hover transition-colors duration-150"
-        style={{ paddingLeft: `${depth * 16 + 12}px` }}
+        style={{ paddingLeft: `${depth * 28 + 12}px` }}
         onClick={() => onToggleCollapse(node.fullPath)}
       >
         {/* Chevron */}
@@ -270,7 +270,7 @@ function FileNodeItem({
             ? "bg-gh-bg-active text-gh-text font-semibold"
             : "bg-transparent text-gh-text-secondary hover:bg-gh-bg-hover"
         }`}
-        style={{ paddingLeft: `${depth * 16 + 12}px` }}
+        style={{ paddingLeft: `${depth * 28 + 12}px` }}
         onClick={() => onFileSelect(file.id)}
         title={file.uploaded ? file.name : file.path}
       >
