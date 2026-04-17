@@ -4,9 +4,7 @@ import { MarkdownViewer } from "./components/MarkdownViewer";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { loadSettings, saveSettings, applyTheme, type Settings } from "./lib/settings";
 import { GroupDropdown } from "./components/GroupDropdown";
-import { ViewModeToggle, type ViewMode } from "./components/ViewModeToggle";
-import { SearchToggle } from "./components/SearchToggle";
-import { TitleToggle } from "./components/TitleToggle";
+import type { ViewMode } from "./components/ViewModeToggle";
 import { RestartButton } from "./components/RestartButton";
 import { DropOverlay } from "./components/DropOverlay";
 import { ZoomModal } from "./components/ZoomModal";
@@ -421,9 +419,6 @@ export function App() {
           activeGroup={activeGroup}
           onGroupChange={handleGroupChange}
         />
-        <ViewModeToggle viewMode={currentViewMode} onToggle={handleViewModeToggle} />
-        <TitleToggle showTitle={currentShowTitle} onToggle={handleTitleToggle} />
-        <SearchToggle isOpen={searchQuery != null} onToggle={handleSearchToggle} />
         <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
@@ -469,8 +464,11 @@ export function App() {
               onFilesReorder={handleFilesReorder}
               viewMode={currentViewMode}
               showTitle={currentShowTitle}
+              onViewModeToggle={handleViewModeToggle}
+              onTitleToggle={handleTitleToggle}
               searchQuery={searchQuery}
               onSearchQueryChange={setSearchQuery}
+              onSearchToggle={handleSearchToggle}
               searchResults={searchResults}
               searchLoading={searchLoading}
               onSearchResultSelect={handleSearchResultSelect}

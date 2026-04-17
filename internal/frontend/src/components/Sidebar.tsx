@@ -18,7 +18,9 @@ import type { FileEntry, Group, SearchResult } from "../hooks/useApi";
 import { removeFile, moveFile } from "../hooks/useApi";
 import { buildFileUrl } from "../utils/groups";
 import { escapeRegExp } from "../utils/regex";
-import type { ViewMode } from "./ViewModeToggle";
+import { ViewModeToggle, type ViewMode } from "./ViewModeToggle";
+import { TitleToggle } from "./TitleToggle";
+import { SearchToggle } from "./SearchToggle";
 import { TreeView } from "./TreeView";
 import { FileContextMenu } from "./FileContextMenu";
 import { FileIcon } from "./FileIcon";
@@ -143,8 +145,11 @@ interface SidebarProps {
   onFilesReorder: (groupName: string, fileIds: string[]) => void;
   viewMode: ViewMode;
   showTitle: boolean;
+  onViewModeToggle: () => void;
+  onTitleToggle: () => void;
   searchQuery: string | null;
   onSearchQueryChange: (query: string | null) => void;
+  onSearchToggle: () => void;
   searchResults?: SearchResult[];
   searchLoading?: boolean;
   onSearchResultSelect?: (fileId: string, heading?: string) => void;
@@ -159,8 +164,11 @@ export function Sidebar({
   onFilesReorder,
   viewMode,
   showTitle,
+  onViewModeToggle,
+  onTitleToggle,
   searchQuery,
   onSearchQueryChange,
+  onSearchToggle,
   searchResults = [],
   searchLoading = false,
   onSearchResultSelect,
@@ -324,6 +332,11 @@ export function Sidebar({
       className={`bg-gh-bg-sidebar border-r border-gh-border flex flex-col overflow-y-auto overscroll-contain ${overlay ? "absolute inset-y-0 left-0 z-30 shadow-xl" : "relative shrink-0"}`}
       style={{ width }}
     >
+      <div className="flex items-center gap-1 px-2 pt-2 pb-1 shrink-0">
+        <ViewModeToggle viewMode={viewMode} onToggle={onViewModeToggle} />
+        <TitleToggle showTitle={showTitle} onToggle={onTitleToggle} />
+        <SearchToggle isOpen={searchQuery != null} onToggle={onSearchToggle} />
+      </div>
       {searchOpen && (
         <div className="px-2 pt-2 pb-1">
           <input

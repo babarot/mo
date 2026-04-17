@@ -9,7 +9,7 @@ export function ViewModeToggle({ viewMode, onToggle }: ViewModeToggleProps) {
   return (
     <button
       type="button"
-      className="flex items-center justify-center bg-transparent border border-gh-border rounded-md p-1.5 text-gh-header-text cursor-pointer transition-colors duration-150 hover:bg-gh-bg-hover"
+      className="flex items-center justify-center bg-transparent border border-gh-border rounded-md p-1.5 text-gh-text-secondary cursor-pointer transition-colors duration-150 hover:bg-gh-bg-hover"
       onClick={onToggle}
       aria-label="Tree view"
       aria-pressed={viewMode === "tree"}
