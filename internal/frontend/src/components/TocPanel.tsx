@@ -10,6 +10,7 @@ interface TocPanelProps {
   headings: TocHeading[];
   activeHeadingId: string | null;
   onHeadingClick: (id: string) => void;
+  floating?: boolean;
 }
 
 const MIN_WIDTH = 180;
@@ -35,7 +36,7 @@ const INDENT: Record<number, string> = {
   6: "pl-18",
 };
 
-export function TocPanel({ headings, activeHeadingId, onHeadingClick }: TocPanelProps) {
+export function TocPanel({ headings, activeHeadingId, onHeadingClick, floating = false }: TocPanelProps) {
   const [width, setWidth] = useState(getInitialWidth);
   const dragging = useRef(false);
 
@@ -69,6 +70,36 @@ export function TocPanel({ headings, activeHeadingId, onHeadingClick }: TocPanel
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, String(width));
   }, [width]);
+
+  if (floating) {
+    return (
+      <aside
+        className="absolute top-4 right-4 z-30 max-h-[80vh] bg-gh-bg border border-gh-border rounded-xl shadow-xl flex flex-col overflow-y-auto overscroll-contain"
+        style={{ width }}
+      >
+        <nav className="flex flex-col py-2">
+          {headings.length === 0 ? (
+            <div className="px-3 py-2 text-gh-text-secondary text-sm">No headings</div>
+          ) : (
+            headings.map((h) => (
+              <button
+                key={h.id}
+                className={`flex items-center w-full ${INDENT[h.level] ?? "pl-3"} pr-3 py-1.5 border-none cursor-pointer text-left text-sm transition-colors duration-150 ${
+                  h.id === activeHeadingId
+                    ? "bg-gh-bg-active text-gh-text font-semibold"
+                    : "bg-transparent text-gh-text-secondary hover:bg-gh-bg-hover"
+                }`}
+                onClick={() => onHeadingClick(h.id)}
+                title={h.text}
+              >
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap">{h.text}</span>
+              </button>
+            ))
+          )}
+        </nav>
+      </aside>
+    );
+  }
 
   return (
     <aside

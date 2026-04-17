@@ -15,16 +15,19 @@
 
 This fork adds the following on top of the upstream `mo`:
 
-- **In-browser Markdown editor** — Edit files directly in the browser with a fullscreen CodeMirror 6 + [vimee](https://github.com/vimeejs/vimee) Vim editor. Toggle with the edit button, `:q` to exit.
+- **In-browser Markdown editor** — Fullscreen CodeMirror 6 + [vimee](https://github.com/vimeejs/vimee) Vim editor. Toggle with the edit button, `:q` to exit.
   - 8 color schemes (Default, Tokyo Night, Nord, Solarized, Dracula, Catppuccin, Rosé Pine, Gruvbox) with Markdown syntax highlighting
   - Block cursor with dynamic width measurement for fullwidth CJK characters
   - Status bar with mode indicator, command line, and cursor position
   - Scroll position sync between view and edit modes
-- **Fullscreen raw view** — Raw Markdown source view fills the content area with syntax highlighting, word wrap, and editor color scheme support (Shiki themes mapped from the selected color scheme).
-- **Light/dark code blocks** — Code fence syntax highlighting follows the app theme instantly via Shiki dual theme (`github-light` / `github-dark`). Background color defers to `github-markdown-css` for accurate GitHub styling.
-- **Sidebar toolbar** — View mode, title display, and search toggles moved from the header into the sidebar for better contextual grouping.
-- **Sidebar overlay mode** — Optional overlay mode where the sidebar floats over content and auto-closes on file select or outside click. Enable in Settings > Appearance.
-- **Settings dialog** — Centralized configuration UI for theme, font size, layout width, sidebar overlay, and editor options.
+- **Rendering** — Enhanced Markdown rendering closer to GitHub's look and feel.
+  - Fullscreen raw view with syntax highlighting, word wrap, and editor color scheme support
+  - Light/dark code blocks via Shiki dual theme (`github-light` / `github-dark`) with `github-markdown-css` background
+- **Sidebar** — Improved sidebar with contextual controls.
+  - Toolbar with view mode, title display, and search toggles inside the sidebar
+  - Overlay mode: sidebar floats over content and auto-closes on file select or outside click
+- **Floating ToC** — Table of contents floats over content as a rounded card, auto-closes on outside click.
+- **Settings dialog** — Centralized configuration UI for theme, font size, layout width, sidebar overlay, floating ToC, and editor options.
 
 ## License
 

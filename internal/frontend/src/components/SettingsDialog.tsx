@@ -92,6 +92,12 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
             checked={settings.sidebarOverlay}
             onChange={(v) => update({ sidebarOverlay: v })}
           />
+          <Toggle
+            label="Floating ToC"
+            description="Table of contents floats over content instead of docked"
+            checked={settings.tocFloating}
+            onChange={(v) => update({ tocFloating: v })}
+          />
         </Section>
 
         {/* Editor */}

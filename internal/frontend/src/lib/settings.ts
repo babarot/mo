@@ -3,6 +3,7 @@ export interface Settings {
   fontSize: "small" | "medium" | "large" | "xlarge";
   wide: boolean;
   sidebarOverlay: boolean;
+  tocFloating: boolean;
   editorLineWrapping: boolean;
   editorAutoSave: boolean;
   editorColorScheme: string;
@@ -16,6 +17,7 @@ const defaults: Settings = {
   fontSize: "medium",
   wide: false,
   sidebarOverlay: false,
+  tocFloating: false,
   editorLineWrapping: true,
   editorAutoSave: false,
   editorColorScheme: "default",
