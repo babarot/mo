@@ -121,7 +121,9 @@ export function App() {
 
     // Active file selection and sidebar auto open/close
     const group = groups.find((g) => g.name === activeGroup);
-    setSidebarOpen(group != null && group.files.length >= 2);
+    if (!settings.sidebarOverlay) {
+      setSidebarOpen(group != null && group.files.length >= 2);
+    }
 
     if (groups.length === 0) {
       setActiveFileId(null);
