@@ -326,6 +326,14 @@ export function App() {
     window.history.pushState(null, "", groupToPath(name));
   };
 
+  const handleFileSelect = useCallback(
+    (fileId: string) => {
+      setActiveFileId(fileId);
+      if (settings.sidebarOverlay) setSidebarOpen(false);
+    },
+    [settings.sidebarOverlay],
+  );
+
   const handleFileOpened = useCallback((fileId: string) => {
     setActiveFileId(fileId);
     setPendingSearchHeading(null);
@@ -444,22 +452,31 @@ export function App() {
           </button>
         </div>
       </header>
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {sidebarOpen && (
-          <Sidebar
-            groups={groups}
-            activeGroup={activeGroup}
-            activeFileId={activeFileId}
-            onFileSelect={setActiveFileId}
-            onFilesReorder={handleFilesReorder}
-            viewMode={currentViewMode}
-            showTitle={currentShowTitle}
-            searchQuery={searchQuery}
-            onSearchQueryChange={setSearchQuery}
-            searchResults={searchResults}
-            searchLoading={searchLoading}
-            onSearchResultSelect={handleSearchResultSelect}
-          />
+          <>
+            {settings.sidebarOverlay && (
+              <div
+                className="absolute inset-0 z-20"
+                onClick={() => setSidebarOpen(false)}
+              />
+            )}
+            <Sidebar
+              groups={groups}
+              activeGroup={activeGroup}
+              activeFileId={activeFileId}
+              onFileSelect={handleFileSelect}
+              onFilesReorder={handleFilesReorder}
+              viewMode={currentViewMode}
+              showTitle={currentShowTitle}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              searchResults={searchResults}
+              searchLoading={searchLoading}
+              onSearchResultSelect={handleSearchResultSelect}
+              overlay={settings.sidebarOverlay}
+            />
+          </>
         )}
         <main className="flex-1 flex flex-col overflow-hidden">
           <div

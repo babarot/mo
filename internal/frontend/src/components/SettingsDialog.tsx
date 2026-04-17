@@ -86,6 +86,12 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
             checked={settings.wide}
             onChange={(v) => update({ wide: v })}
           />
+          <Toggle
+            label="Sidebar overlay"
+            description="Sidebar overlays content and closes on file select"
+            checked={settings.sidebarOverlay}
+            onChange={(v) => update({ sidebarOverlay: v })}
+          />
         </Section>
 
         {/* Editor */}

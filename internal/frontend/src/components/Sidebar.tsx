@@ -148,6 +148,7 @@ interface SidebarProps {
   searchResults?: SearchResult[];
   searchLoading?: boolean;
   onSearchResultSelect?: (fileId: string, heading?: string) => void;
+  overlay?: boolean;
 }
 
 export function Sidebar({
@@ -163,6 +164,7 @@ export function Sidebar({
   searchResults = [],
   searchLoading = false,
   onSearchResultSelect,
+  overlay = false,
 }: SidebarProps) {
   const allFiles = useMemo(() => {
     const currentGroup = groups.find((g) => g.name === activeGroup);
@@ -319,7 +321,7 @@ export function Sidebar({
 
   return (
     <aside
-      className="relative bg-gh-bg-sidebar border-r border-gh-border flex flex-col overflow-y-auto overscroll-contain shrink-0"
+      className={`bg-gh-bg-sidebar border-r border-gh-border flex flex-col overflow-y-auto overscroll-contain ${overlay ? "absolute inset-y-0 left-0 z-30 shadow-xl" : "relative shrink-0"}`}
       style={{ width }}
     >
       {searchOpen && (

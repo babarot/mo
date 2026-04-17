@@ -2,6 +2,7 @@ export interface Settings {
   theme: "auto" | "dark" | "light";
   fontSize: "small" | "medium" | "large" | "xlarge";
   wide: boolean;
+  sidebarOverlay: boolean;
   editorLineWrapping: boolean;
   editorAutoSave: boolean;
   editorColorScheme: string;
@@ -14,6 +15,7 @@ const defaults: Settings = {
   theme: "auto",
   fontSize: "medium",
   wide: false,
+  sidebarOverlay: false,
   editorLineWrapping: true,
   editorAutoSave: false,
   editorColorScheme: "default",

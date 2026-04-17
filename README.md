@@ -22,7 +22,8 @@ This fork adds the following on top of the upstream `mo`:
   - Scroll position sync between view and edit modes
 - **Fullscreen raw view** — Raw Markdown source view fills the content area with syntax highlighting, word wrap, and editor color scheme support (Shiki themes mapped from the selected color scheme).
 - **Light/dark code blocks** — Code fence syntax highlighting follows the app theme instantly via Shiki dual theme (`github-light` / `github-dark`). Background color defers to `github-markdown-css` for accurate GitHub styling.
-- **Settings dialog** — Centralized configuration UI for theme, font size, layout width, and editor options.
+- **Sidebar overlay mode** — Optional overlay mode where the sidebar floats over content and auto-closes on file select or outside click. Enable in Settings > Appearance.
+- **Settings dialog** — Centralized configuration UI for theme, font size, layout width, sidebar overlay, and editor options.
 
 ## License
 
