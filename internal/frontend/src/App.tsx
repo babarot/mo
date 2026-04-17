@@ -298,6 +298,12 @@ export function App() {
   useEffect(() => {
     saveSettings(settings);
     applyTheme(settings.theme);
+    if (settings.theme === "auto") {
+      const mql = window.matchMedia("(prefers-color-scheme: dark)");
+      const handler = () => applyTheme("auto");
+      mql.addEventListener("change", handler);
+      return () => mql.removeEventListener("change", handler);
+    }
   }, [settings]);
 
   const handleViewModeToggle = useCallback(() => {
