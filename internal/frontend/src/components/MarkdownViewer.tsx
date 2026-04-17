@@ -618,12 +618,21 @@ function RawView({ content, shikiTheme }: { content: string; shikiTheme?: string
   return <HighlightedView content={content} language="markdown" shikiTheme={shikiTheme} />;
 }
 
+const RAW_FONT_SIZE: Record<FontSize, string> = {
+  small: "14px",
+  medium: "16px",
+  large: "18px",
+  xlarge: "20px",
+};
+
 function RawFullscreen({
   children,
   onToggle,
+  fontSize = "medium",
 }: {
   children: React.ReactNode;
   onToggle: () => void;
+  fontSize?: FontSize;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -640,6 +649,7 @@ function RawFullscreen({
     <div
       ref={containerRef}
       className="relative h-full overflow-y-auto [&_pre]:!m-0 [&_pre]:!whitespace-pre-wrap [&_pre]:!break-words [&_pre]:!p-4 [&_pre]:!bg-transparent"
+      style={{ fontSize: RAW_FONT_SIZE[fontSize] }}
     >
       <div className="sticky top-4 float-right mr-4 z-10">
         <RawToggle isRaw onToggle={onToggle} />
@@ -1082,7 +1092,7 @@ export function MarkdownViewer({
   }
 
   if (isRawView) {
-    return <RawFullscreen onToggle={handleToggleRaw}>{renderedContent}</RawFullscreen>;
+    return <RawFullscreen onToggle={handleToggleRaw} fontSize={fontSize}>{renderedContent}</RawFullscreen>;
   }
 
   return (
