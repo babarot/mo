@@ -1,8 +1,16 @@
 diff --git a/dist/index.cjs b/dist/index.cjs
-index 8ebd468f36519c154458d353415230265c7eb525..cb1f00152a145214b34deed4b50e19f6751e49bd 100644
+index 8ebd468f36519c154458d353415230265c7eb525..33265817fcd460e3e48d3091e05da5b1d1cd7615 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
-@@ -282,8 +282,19 @@ function attach(view, options = {}) {
+@@ -252,6 +252,7 @@ function attach(view, options = {}) {
+     };
+   }
+   function shouldPreventDefault(e) {
++    if (e.metaKey) return false;
+     const mode = ctx.mode;
+     if (mode !== "insert") {
+       if (e.ctrlKey && (e.key === "c" || e.key === "a")) return false;
+@@ -282,9 +283,21 @@ function attach(view, options = {}) {
      ctx = { ...ctx, cursor: newCursor };
      syncCursorToEditor(newCursor);
    }
@@ -20,9 +28,11 @@ index 8ebd468f36519c154458d353415230265c7eb525..cb1f00152a145214b34deed4b50e19f6
      if (isComposing) return;
 +    syncCursorFromEditor();
      syncViewport();
++    if (e.metaKey) return;
      if (e.ctrlKey) {
        const scrollKeys = {
-@@ -328,6 +339,7 @@ function attach(view, options = {}) {
+         b: { direction: "up", amount: 1 },
+@@ -328,6 +341,7 @@ function attach(view, options = {}) {
      getMode: () => ctx.mode,
      getCursor: () => ({ ...ctx.cursor }),
      getContent: () => buffer.getContent(),
@@ -31,10 +41,18 @@ index 8ebd468f36519c154458d353415230265c7eb525..cb1f00152a145214b34deed4b50e19f6
        target.removeEventListener("keydown", onKeyDown, { capture: true });
        target.removeEventListener("compositionstart", onCompositionStart);
 diff --git a/dist/index.js b/dist/index.js
-index 0f433f473c0ba81b22bb6c59832b32a270d43fe2..ba5038b71f9575ed3b03086a439d40a6680ca23c 100644
+index 0f433f473c0ba81b22bb6c59832b32a270d43fe2..671bdd5dd3fe06b9356b7d6b338b520eea0e3a4b 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -252,8 +252,19 @@ function attach(view, options = {}) {
+@@ -222,6 +222,7 @@ function attach(view, options = {}) {
+     };
+   }
+   function shouldPreventDefault(e) {
++    if (e.metaKey) return false;
+     const mode = ctx.mode;
+     if (mode !== "insert") {
+       if (e.ctrlKey && (e.key === "c" || e.key === "a")) return false;
+@@ -252,9 +253,21 @@ function attach(view, options = {}) {
      ctx = { ...ctx, cursor: newCursor };
      syncCursorToEditor(newCursor);
    }
@@ -52,9 +70,11 @@ index 0f433f473c0ba81b22bb6c59832b32a270d43fe2..ba5038b71f9575ed3b03086a439d40a6
      if (isComposing) return;
 +    syncCursorFromEditor();
      syncViewport();
++    if (e.metaKey) return;
      if (e.ctrlKey) {
        const scrollKeys = {
-@@ -298,6 +309,7 @@ function attach(view, options = {}) {
+         b: { direction: "up", amount: 1 },
+@@ -298,6 +311,7 @@ function attach(view, options = {}) {
      getMode: () => ctx.mode,
      getCursor: () => ({ ...ctx.cursor }),
      getContent: () => buffer.getContent(),
