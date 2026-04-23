@@ -216,6 +216,9 @@ body,
   font-family: "Menlo", "Monaco", "Courier New", monospace;
   font-size: 14px;
 }
+.vim-visual .cm-activeLine {
+  background-color: transparent !important;
+}
 
 [data-theme="dark"] .markdown-body {
   color-scheme: dark;
