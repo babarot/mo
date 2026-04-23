@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -14,37 +15,15 @@ import (
 	"github.com/k1LoW/mo/internal/server"
 )
 
-func TestResolvePatterns_NoGlobChars(t *testing.T) {
-	_, err := resolvePatterns([]string{"README.md"})
-	if err == nil {
-		t.Fatal("resolvePatterns should return error for pattern without glob chars")
-	}
-}
-
-func TestResolvePatterns_Valid(t *testing.T) {
-	patterns, err := resolvePatterns([]string{"**/*.md", "docs/*.md"})
-	if err != nil {
-		t.Fatalf("resolvePatterns returned error: %v", err)
-	}
-	if len(patterns) != 2 {
-		t.Fatalf("got %d patterns, want 2", len(patterns))
-	}
-	for _, p := range patterns {
-		if !filepath.IsAbs(p) {
-			t.Errorf("pattern %q is not absolute", p)
-		}
-	}
-}
-
 func TestRun_UnwatchWithWatch(t *testing.T) {
-	unwatchPatterns = []string{"**/*.md"}
-	watchPatterns = []string{"**/*.md"}
+	unwatchMode = true
+	watchMode = true
 	defer func() {
-		unwatchPatterns = nil
-		watchPatterns = nil
+		unwatchMode = false
+		watchMode = false
 	}()
 
-	err := run(rootCmd, nil)
+	err := run(rootCmd, []string{"**/*.md"})
 	if err == nil {
 		t.Fatal("run should return error when --unwatch and --watch are both specified")
 	}
@@ -54,17 +33,33 @@ func TestRun_UnwatchWithWatch(t *testing.T) {
 	}
 }
 
-func TestRun_UnwatchWithArgs(t *testing.T) {
-	unwatchPatterns = []string{"**/*.md"}
-	defer func() { unwatchPatterns = nil }()
+func TestRun_UnwatchWithoutArgs(t *testing.T) {
+	unwatchMode = true
+	defer func() { unwatchMode = false }()
 
-	err := run(rootCmd, []string{"README.md"})
+	err := run(rootCmd, nil)
 	if err == nil {
-		t.Fatal("run should return error when --unwatch and args are both specified")
+		t.Fatal("run should return error when --unwatch has no arguments")
 	}
-	want := "cannot use --unwatch with file arguments"
+	want := "--unwatch requires a glob pattern or directory argument"
 	if err.Error() != want {
 		t.Fatalf("got error %q, want %q", err.Error(), want)
+	}
+}
+
+func TestRun_UnwatchWithFileArgs(t *testing.T) {
+	f := filepath.Join(t.TempDir(), "test.md")
+	writeTestFile(t, f, []byte("# Test"))
+
+	unwatchMode = true
+	defer func() { unwatchMode = false }()
+
+	err := run(rootCmd, []string{f})
+	if err == nil {
+		t.Fatal("run should return error when --unwatch is given file arguments")
+	}
+	if !strings.Contains(err.Error(), "not individual files") {
+		t.Fatalf("got error %q, want hint about individual files", err.Error())
 	}
 }
 
@@ -85,10 +80,10 @@ func TestRun_Close(t *testing.T) {
 
 	t.Run("with watch returns error", func(t *testing.T) {
 		closeFiles = true
-		watchPatterns = []string{"**/*.md"}
+		watchMode = true
 		defer func() {
 			closeFiles = false
-			watchPatterns = nil
+			watchMode = false
 		}()
 
 		err := run(rootCmd, []string{"README.md"})
@@ -102,45 +97,41 @@ func TestRun_Close(t *testing.T) {
 	})
 }
 
-func TestRun_WatchWithArgs(t *testing.T) {
-	t.Run("with glob pattern", func(t *testing.T) {
-		f := filepath.Join(t.TempDir(), "test.md")
-		writeTestFile(t, f, []byte("# Test"))
+func TestRun_Watch(t *testing.T) {
+	t.Run("no args errors", func(t *testing.T) {
+		watchMode = true
+		defer func() { watchMode = false }()
 
-		watchPatterns = []string{"**/*.md"}
-		defer func() { watchPatterns = nil }()
-
-		err := run(rootCmd, []string{f})
+		err := run(rootCmd, nil)
 		if err == nil {
-			t.Fatal("run should return error when --watch and args are both specified")
+			t.Fatal("run should return error when --watch has no pattern or directory argument")
 		}
-		want := "cannot use --watch (-w) with file arguments"
-		if err.Error() != want {
-			t.Fatalf("got error %q, want %q", err.Error(), want)
+		if !strings.Contains(err.Error(), "requires a glob pattern or directory argument") {
+			t.Fatalf("got error %q, want 'requires a glob pattern or directory argument'", err.Error())
 		}
 	})
 
-	t.Run("without glob chars hints shell expansion", func(t *testing.T) {
+	t.Run("only file args hints shell expansion", func(t *testing.T) {
 		f1 := filepath.Join(t.TempDir(), "a.md")
 		writeTestFile(t, f1, []byte("# A"))
 		f2 := filepath.Join(t.TempDir(), "b.md")
 		writeTestFile(t, f2, []byte("# B"))
 
-		watchPatterns = []string{f1}
-		defer func() { watchPatterns = nil }()
+		watchMode = true
+		defer func() { watchMode = false }()
 
-		err := run(rootCmd, []string{f2})
+		err := run(rootCmd, []string{f1, f2})
 		if err == nil {
-			t.Fatal("run should return error when --watch and args are both specified")
+			t.Fatal("run should return error when --watch is given only regular file arguments")
 		}
 		if !strings.Contains(err.Error(), "shell may have expanded") {
 			t.Fatalf("error should hint shell expansion, got %q", err.Error())
 		}
 	})
 
-	t.Run("non-existent file with watch returns file not found", func(t *testing.T) {
-		watchPatterns = []string{"**/*.md"}
-		defer func() { watchPatterns = nil }()
+	t.Run("non-existent arg returns file not found", func(t *testing.T) {
+		watchMode = true
+		defer func() { watchMode = false }()
 
 		err := run(rootCmd, []string{"nonexistent.md"})
 		if err == nil {
@@ -150,6 +141,236 @@ func TestRun_WatchWithArgs(t *testing.T) {
 			t.Fatalf("got error %q, want file not found error", err.Error())
 		}
 	})
+}
+
+func TestRun_RecursiveRequiresArgs(t *testing.T) {
+	recursive = true
+	defer func() { recursive = false }()
+
+	err := run(rootCmd, nil)
+	if err == nil {
+		t.Fatal("run should return error when --recursive is used without any argument")
+	}
+	want := "--recursive (-R) requires a directory argument"
+	if err.Error() != want {
+		t.Fatalf("got error %q, want %q", err.Error(), want)
+	}
+}
+
+func TestResolveUnwatchArgs_GlobPattern(t *testing.T) {
+	patterns, err := resolveUnwatchArgs([]string{"**/*.md", "docs/*.md"}, false, "", "default")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(patterns) != 2 {
+		t.Fatalf("got %d patterns, want 2", len(patterns))
+	}
+	for _, p := range patterns {
+		if !filepath.IsAbs(p) {
+			t.Errorf("pattern %q is not absolute", p)
+		}
+	}
+}
+
+func TestResolveUnwatchArgs_Directory(t *testing.T) {
+	dir := t.TempDir()
+
+	patterns, err := resolveUnwatchArgs([]string{dir}, false, "", "default")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(patterns) != 1 {
+		t.Fatalf("got %d patterns, want 1", len(patterns))
+	}
+	want := filepath.Join(dir, "*.md")
+	if patterns[0] != want {
+		t.Errorf("got pattern %q, want %q", patterns[0], want)
+	}
+}
+
+func TestResolveUnwatchArgs_FileReturnsError(t *testing.T) {
+	f := filepath.Join(t.TempDir(), "test.md")
+	writeTestFile(t, f, []byte("# Test"))
+
+	_, err := resolveUnwatchArgs([]string{f}, false, "", "default")
+	if err == nil {
+		t.Fatal("expected error for file argument")
+	}
+	if !strings.Contains(err.Error(), "not individual files") {
+		t.Fatalf("got error %q, want hint about individual files", err.Error())
+	}
+}
+
+func TestResolveUnwatchArgs_RecursiveDirectory(t *testing.T) {
+	dir := t.TempDir()
+
+	// Set up a mock server that returns patterns for the group.
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := statusResponse{
+			Groups: []struct {
+				Name  string `json:"name"`
+				Files []struct {
+					Name string `json:"name"`
+					ID   string `json:"id"`
+					Path string `json:"path"`
+				} `json:"files"`
+				Patterns []string `json:"patterns,omitempty"`
+			}{
+				{
+					Name: "default",
+					Patterns: []string{
+						filepath.Join(dir, "*.md"),
+						filepath.Join(dir, "sub", "*.md"),
+						filepath.Join(dir, "**/*.md"),
+						"/other/path/*.md",
+					},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp) //nolint:errcheck
+	})
+	ts := httptest.NewServer(handler)
+	defer ts.Close()
+	addr := strings.TrimPrefix(ts.URL, "http://")
+
+	patterns, err := resolveUnwatchArgs([]string{dir}, true, addr, "default")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(patterns) != 3 {
+		t.Fatalf("got %d patterns, want 3: %v", len(patterns), patterns)
+	}
+	// Should NOT include /other/path/*.md
+	for _, p := range patterns {
+		if !strings.HasPrefix(p, dir) {
+			t.Errorf("unexpected pattern %q not under %s", p, dir)
+		}
+	}
+}
+
+func TestResolveUnwatchArgs_RecursiveNoMatch(t *testing.T) {
+	dir := t.TempDir()
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := statusResponse{
+			Groups: []struct {
+				Name  string `json:"name"`
+				Files []struct {
+					Name string `json:"name"`
+					ID   string `json:"id"`
+					Path string `json:"path"`
+				} `json:"files"`
+				Patterns []string `json:"patterns,omitempty"`
+			}{
+				{
+					Name:     "default",
+					Patterns: []string{"/other/path/*.md"},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp) //nolint:errcheck
+	})
+	ts := httptest.NewServer(handler)
+	defer ts.Close()
+	addr := strings.TrimPrefix(ts.URL, "http://")
+
+	_, err := resolveUnwatchArgs([]string{dir}, true, addr, "default")
+	if err == nil {
+		t.Fatal("expected error when no patterns match under directory")
+	}
+	if !strings.Contains(err.Error(), "no watched patterns found under") {
+		t.Fatalf("got error %q, want 'no watched patterns found under'", err.Error())
+	}
+}
+
+func TestResolveUnwatchArgs_RecursiveDeletedDirectory(t *testing.T) {
+	// Use a path that does not exist on disk.
+	deletedDir := filepath.Join(t.TempDir(), "deleted")
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := statusResponse{
+			Groups: []struct {
+				Name  string `json:"name"`
+				Files []struct {
+					Name string `json:"name"`
+					ID   string `json:"id"`
+					Path string `json:"path"`
+				} `json:"files"`
+				Patterns []string `json:"patterns,omitempty"`
+			}{
+				{
+					Name: "default",
+					Patterns: []string{
+						filepath.Join(deletedDir, "*.md"),
+						filepath.Join(deletedDir, "**/*.md"),
+					},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp) //nolint:errcheck
+	})
+	ts := httptest.NewServer(handler)
+	defer ts.Close()
+	addr := strings.TrimPrefix(ts.URL, "http://")
+
+	patterns, err := resolveUnwatchArgs([]string{deletedDir}, true, addr, "default")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(patterns) != 2 {
+		t.Fatalf("got %d patterns, want 2: %v", len(patterns), patterns)
+	}
+}
+
+func TestResolveUnwatchArgs_NonRecursiveDeletedDirectory(t *testing.T) {
+	deletedDir := filepath.Join(t.TempDir(), "deleted")
+
+	_, err := resolveUnwatchArgs([]string{deletedDir}, false, "", "default")
+	if err == nil {
+		t.Fatal("expected error for non-existent directory without -R")
+	}
+	if !strings.Contains(err.Error(), "path not found") {
+		t.Fatalf("got error %q, want 'path not found'", err.Error())
+	}
+}
+
+func TestResolveUnwatchArgs_RecursiveGroupNotFound(t *testing.T) {
+	dir := t.TempDir()
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := statusResponse{
+			Groups: []struct {
+				Name  string `json:"name"`
+				Files []struct {
+					Name string `json:"name"`
+					ID   string `json:"id"`
+					Path string `json:"path"`
+				} `json:"files"`
+				Patterns []string `json:"patterns,omitempty"`
+			}{
+				{
+					Name:     "other",
+					Patterns: []string{"/other/*.md"},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp) //nolint:errcheck
+	})
+	ts := httptest.NewServer(handler)
+	defer ts.Close()
+	addr := strings.TrimPrefix(ts.URL, "http://")
+
+	_, err := resolveUnwatchArgs([]string{dir}, true, addr, "default")
+	if err == nil {
+		t.Fatal("expected error when group does not exist")
+	}
+	if !strings.Contains(err.Error(), "group") || !strings.Contains(err.Error(), "not found") {
+		t.Fatalf("got error %q, want group not found error", err.Error())
+	}
 }
 
 func TestMergeGroups(t *testing.T) {
@@ -660,12 +881,12 @@ func TestResolveArgs_Directory(t *testing.T) {
 	writeTestFile(t, filepath.Join(dir, "b.md"), []byte("# B"))
 	writeTestFile(t, filepath.Join(dir, "c.txt"), []byte("text"))
 
-	files, dirPatterns, err := resolveArgs([]string{dir}, false)
+	files, patterns, err := resolveArgs([]string{dir}, false, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(dirPatterns) != 0 {
-		t.Fatalf("got %d dirPatterns, want 0", len(dirPatterns))
+	if len(patterns) != 0 {
+		t.Fatalf("got %d patterns, want 0", len(patterns))
 	}
 	if len(files) != 2 {
 		t.Fatalf("got %d files, want 2: %v", len(files), files)
@@ -677,30 +898,141 @@ func TestResolveArgs_Directory(t *testing.T) {
 	}
 }
 
+func TestResolveArgs_DirectoryNaturalOrder(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"i1.md", "i2.md", "i10.md", "i11.md"} {
+		writeTestFile(t, filepath.Join(dir, name), []byte("# "+name))
+	}
+
+	files, _, err := resolveArgs([]string{dir}, false, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := []string{
+		filepath.Join(dir, "i1.md"),
+		filepath.Join(dir, "i2.md"),
+		filepath.Join(dir, "i10.md"),
+		filepath.Join(dir, "i11.md"),
+	}
+	if len(files) != len(want) {
+		t.Fatalf("got %d files, want %d: %v", len(files), len(want), files)
+	}
+	for i := range want {
+		if files[i] != want[i] {
+			t.Errorf("files[%d] = %q, want %q", i, files[i], want[i])
+		}
+	}
+}
+
 func TestResolveArgs_DirectoryWithWatch(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, filepath.Join(dir, "a.md"), []byte("# A"))
 
-	files, dirPatterns, err := resolveArgs([]string{dir}, true)
+	files, patterns, err := resolveArgs([]string{dir}, true, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(files) != 0 {
 		t.Fatalf("got %d files, want 0", len(files))
 	}
-	if len(dirPatterns) != 1 {
-		t.Fatalf("got %d dirPatterns, want 1", len(dirPatterns))
+	if len(patterns) != 1 {
+		t.Fatalf("got %d patterns, want 1", len(patterns))
 	}
 	want := filepath.Join(dir, "*.md")
-	if dirPatterns[0] != want {
-		t.Errorf("got pattern %q, want %q", dirPatterns[0], want)
+	if patterns[0] != want {
+		t.Errorf("got pattern %q, want %q", patterns[0], want)
+	}
+}
+
+func TestResolveArgs_DirectoryWithWatchRecursive(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, filepath.Join(dir, "a.md"), []byte("# A"))
+
+	files, patterns, err := resolveArgs([]string{dir}, true, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(files) != 0 {
+		t.Fatalf("got %d files, want 0", len(files))
+	}
+	if len(patterns) != 1 {
+		t.Fatalf("got %d patterns, want 1", len(patterns))
+	}
+	want := filepath.Join(dir, "**/*.md")
+	if patterns[0] != want {
+		t.Errorf("got pattern %q, want %q", patterns[0], want)
+	}
+}
+
+func TestResolveArgs_DirectoryRecursive(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, filepath.Join(dir, "a.md"), []byte("# A"))
+	sub := filepath.Join(dir, "sub")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(sub, "b.md"), []byte("# B"))
+	writeTestFile(t, filepath.Join(sub, "c.txt"), []byte("text"))
+
+	files, patterns, err := resolveArgs([]string{dir}, false, true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(patterns) != 0 {
+		t.Fatalf("got %d patterns, want 0", len(patterns))
+	}
+	if len(files) != 2 {
+		t.Fatalf("got %d files, want 2: %v", len(files), files)
+	}
+	wantNested := filepath.Join(sub, "b.md")
+	if !slices.Contains(files, wantNested) {
+		t.Errorf("recursive expansion missed nested file %q in %v", wantNested, files)
+	}
+}
+
+func TestResolveArgs_GlobPositional_WatchMode(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, filepath.Join(dir, "a.md"), []byte("# A"))
+	pattern := filepath.Join(dir, "*.md")
+
+	files, patterns, err := resolveArgs([]string{pattern}, true, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(files) != 0 {
+		t.Fatalf("got %d files, want 0", len(files))
+	}
+	if len(patterns) != 1 {
+		t.Fatalf("got %d patterns, want 1: %v", len(patterns), patterns)
+	}
+	if !filepath.IsAbs(patterns[0]) {
+		t.Errorf("pattern %q is not absolute", patterns[0])
+	}
+}
+
+func TestResolveArgs_GlobPositional_NonWatch(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, filepath.Join(dir, "a.md"), []byte("# A"))
+	writeTestFile(t, filepath.Join(dir, "b.md"), []byte("# B"))
+	pattern := filepath.Join(dir, "*.md")
+
+	files, patterns, err := resolveArgs([]string{pattern}, false, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(patterns) != 0 {
+		t.Fatalf("got %d patterns, want 0", len(patterns))
+	}
+	if len(files) != 2 {
+		t.Fatalf("got %d files, want 2: %v", len(files), files)
 	}
 }
 
 func TestResolveArgs_EmptyDirectory(t *testing.T) {
 	dir := t.TempDir()
 
-	_, _, err := resolveArgs([]string{dir}, false)
+	_, _, err := resolveArgs([]string{dir}, false, false)
 	if err == nil {
 		t.Fatal("expected error for empty directory")
 	}
@@ -826,15 +1158,15 @@ func TestReadStdin(t *testing.T) {
 func TestResolveArgs_EmptyDirectoryWithWatch(t *testing.T) {
 	dir := t.TempDir()
 
-	files, dirPatterns, err := resolveArgs([]string{dir}, true)
+	files, patterns, err := resolveArgs([]string{dir}, true, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(files) != 0 {
 		t.Fatalf("got %d files, want 0", len(files))
 	}
-	if len(dirPatterns) != 1 {
-		t.Fatalf("got %d dirPatterns, want 1", len(dirPatterns))
+	if len(patterns) != 1 {
+		t.Fatalf("got %d patterns, want 1", len(patterns))
 	}
 }
 
@@ -845,12 +1177,12 @@ func TestResolveArgs_MixedFilesAndDirs(t *testing.T) {
 	singleFile := filepath.Join(t.TempDir(), "standalone.md")
 	writeTestFile(t, singleFile, []byte("# Standalone"))
 
-	files, dirPatterns, err := resolveArgs([]string{dir, singleFile}, false)
+	files, patterns, err := resolveArgs([]string{dir, singleFile}, false, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(dirPatterns) != 0 {
-		t.Fatalf("got %d dirPatterns, want 0", len(dirPatterns))
+	if len(patterns) != 0 {
+		t.Fatalf("got %d patterns, want 0", len(patterns))
 	}
 	if len(files) != 2 {
 		t.Fatalf("got %d files, want 2: %v", len(files), files)
