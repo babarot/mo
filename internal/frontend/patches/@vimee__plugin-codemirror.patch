@@ -1,8 +1,16 @@
 diff --git a/dist/index.cjs b/dist/index.cjs
-index 8ebd468f36519c154458d353415230265c7eb525..36fdc3fc74c290314a3ed163a6c494a284f30322 100644
+index 8ebd468f36519c154458d353415230265c7eb525..74e023452dd61e39f122c49eba9d94f0c2289e27 100644
 --- a/dist/index.cjs
 +++ b/dist/index.cjs
-@@ -252,6 +252,7 @@ function attach(view, options = {}) {
+@@ -137,6 +137,7 @@ function attach(view, options = {}) {
+   });
+   let isComposing = false;
+   let prevSearchHighlight = "";
++  let lastInsertState = null;
+   const cmDispatch = view.dispatch.bind(view);
+   cmDispatch({
+     effects: import_state.StateEffect.appendConfig.of([searchHighlightField, searchHighlightTheme])
+@@ -252,6 +253,7 @@ function attach(view, options = {}) {
      };
    }
    function shouldPreventDefault(e) {
@@ -10,10 +18,16 @@ index 8ebd468f36519c154458d353415230265c7eb525..36fdc3fc74c290314a3ed163a6c494a2
      const mode = ctx.mode;
      if (mode !== "insert") {
        if (e.ctrlKey && (e.key === "c" || e.key === "a")) return false;
-@@ -282,9 +283,21 @@ function attach(view, options = {}) {
+@@ -282,9 +284,28 @@ function attach(view, options = {}) {
      ctx = { ...ctx, cursor: newCursor };
      syncCursorToEditor(newCursor);
    }
++  function syncBufferFromEditor() {
++    const editorContent = view.state.doc.toString();
++    if (editorContent !== buffer.getContent()) {
++      buffer.replaceContent(editorContent);
++    }
++  }
 +  function syncCursorFromEditor() {
 +    if (ctx.mode === "visual" || ctx.mode === "visual-line" || ctx.mode === "visual-block") {
 +      return;
@@ -26,16 +40,42 @@ index 8ebd468f36519c154458d353415230265c7eb525..36fdc3fc74c290314a3ed163a6c494a2
 +  }
    function onKeyDown(e) {
      if (isComposing) return;
++    syncBufferFromEditor();
 +    syncCursorFromEditor();
      syncViewport();
 +    if (e.metaKey) return;
      if (e.ctrlKey) {
        const scrollKeys = {
          b: { direction: "up", amount: 1 },
-@@ -319,8 +332,33 @@ function attach(view, options = {}) {
+@@ -304,6 +325,11 @@ function attach(view, options = {}) {
+       e.preventDefault();
+       e.stopPropagation();
+     }
++    if (ctx.mode === "insert" && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
++      lastInsertState = { content: buffer.getContent(), cursor: { ...ctx.cursor } };
++    } else {
++      lastInsertState = null;
++    }
+     const { newCtx, actions } = (0, import_core.processKeystroke)(e.key, ctx, buffer, e.ctrlKey, readOnly);
+     ctx = newCtx;
+     processActions(actions, newCtx, e.key);
+@@ -315,12 +341,46 @@ function attach(view, options = {}) {
+   }
+   function onCompositionStart() {
+     isComposing = true;
++    if (lastInsertState) {
++      buffer.replaceContent(lastInsertState.content);
++      ctx = { ...ctx, cursor: lastInsertState.cursor };
++      syncContentToEditor();
++      syncCursorToEditor(lastInsertState.cursor);
++      lastInsertState = null;
++    }
+   }
    function onCompositionEnd() {
      isComposing = false;
-   }
++    syncBufferFromEditor();
++    syncCursorFromEditor();
++  }
 +  function onMouseUp() {
 +    const sel = view.state.selection.main;
 +    if (sel.empty) {
@@ -59,14 +99,14 @@ index 8ebd468f36519c154458d353415230265c7eb525..36fdc3fc74c290314a3ed163a6c494a2
 +    };
 +    onModeChange?.("visual");
 +    onAction?.({ type: "mode-change", mode: "visual" });
-+  }
+   }
    const target = view.contentDOM;
    target.addEventListener("keydown", onKeyDown, { capture: true });
 +  target.addEventListener("mouseup", onMouseUp);
    target.addEventListener("compositionstart", onCompositionStart);
    target.addEventListener("compositionend", onCompositionEnd);
    syncViewport();
-@@ -328,8 +366,10 @@ function attach(view, options = {}) {
+@@ -328,8 +388,10 @@ function attach(view, options = {}) {
      getMode: () => ctx.mode,
      getCursor: () => ({ ...ctx.cursor }),
      getContent: () => buffer.getContent(),
@@ -78,10 +118,18 @@ index 8ebd468f36519c154458d353415230265c7eb525..36fdc3fc74c290314a3ed163a6c494a2
        target.removeEventListener("compositionend", onCompositionEnd);
      }
 diff --git a/dist/index.js b/dist/index.js
-index 0f433f473c0ba81b22bb6c59832b32a270d43fe2..5da12ea1b2c712cba3736c01358f72c499ab1fe0 100644
+index 0f433f473c0ba81b22bb6c59832b32a270d43fe2..eecb8c25738656ea956279d2c6b6e9e2e6bd5e93 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -222,6 +222,7 @@ function attach(view, options = {}) {
+@@ -107,6 +107,7 @@ function attach(view, options = {}) {
+   });
+   let isComposing = false;
+   let prevSearchHighlight = "";
++  let lastInsertState = null;
+   const cmDispatch = view.dispatch.bind(view);
+   cmDispatch({
+     effects: StateEffect.appendConfig.of([searchHighlightField, searchHighlightTheme])
+@@ -222,6 +223,7 @@ function attach(view, options = {}) {
      };
    }
    function shouldPreventDefault(e) {
@@ -89,10 +137,16 @@ index 0f433f473c0ba81b22bb6c59832b32a270d43fe2..5da12ea1b2c712cba3736c01358f72c4
      const mode = ctx.mode;
      if (mode !== "insert") {
        if (e.ctrlKey && (e.key === "c" || e.key === "a")) return false;
-@@ -252,9 +253,21 @@ function attach(view, options = {}) {
+@@ -252,9 +254,28 @@ function attach(view, options = {}) {
      ctx = { ...ctx, cursor: newCursor };
      syncCursorToEditor(newCursor);
    }
++  function syncBufferFromEditor() {
++    const editorContent = view.state.doc.toString();
++    if (editorContent !== buffer.getContent()) {
++      buffer.replaceContent(editorContent);
++    }
++  }
 +  function syncCursorFromEditor() {
 +    if (ctx.mode === "visual" || ctx.mode === "visual-line" || ctx.mode === "visual-block") {
 +      return;
@@ -105,16 +159,42 @@ index 0f433f473c0ba81b22bb6c59832b32a270d43fe2..5da12ea1b2c712cba3736c01358f72c4
 +  }
    function onKeyDown(e) {
      if (isComposing) return;
++    syncBufferFromEditor();
 +    syncCursorFromEditor();
      syncViewport();
 +    if (e.metaKey) return;
      if (e.ctrlKey) {
        const scrollKeys = {
          b: { direction: "up", amount: 1 },
-@@ -289,8 +302,33 @@ function attach(view, options = {}) {
+@@ -274,6 +295,11 @@ function attach(view, options = {}) {
+       e.preventDefault();
+       e.stopPropagation();
+     }
++    if (ctx.mode === "insert" && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
++      lastInsertState = { content: buffer.getContent(), cursor: { ...ctx.cursor } };
++    } else {
++      lastInsertState = null;
++    }
+     const { newCtx, actions } = processKeystroke(e.key, ctx, buffer, e.ctrlKey, readOnly);
+     ctx = newCtx;
+     processActions(actions, newCtx, e.key);
+@@ -285,12 +311,46 @@ function attach(view, options = {}) {
+   }
+   function onCompositionStart() {
+     isComposing = true;
++    if (lastInsertState) {
++      buffer.replaceContent(lastInsertState.content);
++      ctx = { ...ctx, cursor: lastInsertState.cursor };
++      syncContentToEditor();
++      syncCursorToEditor(lastInsertState.cursor);
++      lastInsertState = null;
++    }
+   }
    function onCompositionEnd() {
      isComposing = false;
-   }
++    syncBufferFromEditor();
++    syncCursorFromEditor();
++  }
 +  function onMouseUp() {
 +    const sel = view.state.selection.main;
 +    if (sel.empty) {
@@ -138,14 +218,14 @@ index 0f433f473c0ba81b22bb6c59832b32a270d43fe2..5da12ea1b2c712cba3736c01358f72c4
 +    };
 +    onModeChange?.("visual");
 +    onAction?.({ type: "mode-change", mode: "visual" });
-+  }
+   }
    const target = view.contentDOM;
    target.addEventListener("keydown", onKeyDown, { capture: true });
 +  target.addEventListener("mouseup", onMouseUp);
    target.addEventListener("compositionstart", onCompositionStart);
    target.addEventListener("compositionend", onCompositionEnd);
    syncViewport();
-@@ -298,8 +336,10 @@ function attach(view, options = {}) {
+@@ -298,8 +358,10 @@ function attach(view, options = {}) {
      getMode: () => ctx.mode,
      getCursor: () => ({ ...ctx.cursor }),
      getContent: () => buffer.getContent(),

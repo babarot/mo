@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@vimee/plugin-codemirror':
-    hash: 1bedb45e28e76e2915de0531c4490695cd3a6cda7adde8fb0bb7bce296f6a429
+    hash: 0d8873fe06d551461a585b8817356b68574f01e13e60257fa0d4137b76f94e69
     path: patches/@vimee__plugin-codemirror.patch
 
 importers:
@@ -51,7 +51,7 @@ importers:
         version: 0.3.0
       '@vimee/plugin-codemirror':
         specifier: ^0.2.0
-        version: 0.2.0(patch_hash=1bedb45e28e76e2915de0531c4490695cd3a6cda7adde8fb0bb7bce296f6a429)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(@vimee/core@0.3.0)
+        version: 0.2.0(patch_hash=0d8873fe06d551461a585b8817356b68574f01e13e60257fa0d4137b76f94e69)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(@vimee/core@0.3.0)
       codemirror:
         specifier: ^6.0.2
         version: 6.0.2
@@ -3950,7 +3950,7 @@ snapshots:
 
   '@vimee/core@0.3.0': {}
 
-  '@vimee/plugin-codemirror@0.2.0(patch_hash=1bedb45e28e76e2915de0531c4490695cd3a6cda7adde8fb0bb7bce296f6a429)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(@vimee/core@0.3.0)':
+  '@vimee/plugin-codemirror@0.2.0(patch_hash=0d8873fe06d551461a585b8817356b68574f01e13e60257fa0d4137b76f94e69)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(@vimee/core@0.3.0)':
     dependencies:
       '@codemirror/state': 6.6.0
       '@codemirror/view': 6.41.0
