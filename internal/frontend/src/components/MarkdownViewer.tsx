@@ -516,8 +516,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    const stripPreBg = (h: string) =>
-      h.replace(/(<pre[^>]*?) style="[^"]*"/, "$1");
+    const stripPreBg = (h: string) => h.replace(/(<pre[^>]*?) style="[^"]*"/, "$1");
     codeToHtml(code, { lang: language, themes: shikiDualThemes, defaultColor: false })
       .then((result) => {
         if (!cancelled) setHtml(stripPreBg(result));
@@ -1092,7 +1091,11 @@ export function MarkdownViewer({
   }
 
   if (isRawView) {
-    return <RawFullscreen onToggle={handleToggleRaw} fontSize={fontSize}>{renderedContent}</RawFullscreen>;
+    return (
+      <RawFullscreen onToggle={handleToggleRaw} fontSize={fontSize}>
+        {renderedContent}
+      </RawFullscreen>
+    );
   }
 
   return (

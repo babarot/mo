@@ -36,7 +36,12 @@ const INDENT: Record<number, string> = {
   6: "pl-18",
 };
 
-export function TocPanel({ headings, activeHeadingId, onHeadingClick, floating = false }: TocPanelProps) {
+export function TocPanel({
+  headings,
+  activeHeadingId,
+  onHeadingClick,
+  floating = false,
+}: TocPanelProps) {
   const [width, setWidth] = useState(getInitialWidth);
   const dragging = useRef(false);
 

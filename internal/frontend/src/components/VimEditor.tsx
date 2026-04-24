@@ -311,7 +311,10 @@ export const VimEditor = forwardRef<VimEditorHandle, VimEditorProps>(function Vi
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div ref={containerRef} className={`mo-vim-editor flex-1 overflow-hidden${mode === "visual" || mode === "visual-line" || mode === "visual-block" ? " vim-visual" : ""}`} />
+      <div
+        ref={containerRef}
+        className={`mo-vim-editor flex-1 overflow-hidden${mode === "visual" || mode === "visual-line" || mode === "visual-block" ? " vim-visual" : ""}`}
+      />
       <div className="shrink-0 flex items-center justify-between px-3 py-0.5 text-xs font-mono bg-gh-bg-secondary text-gh-text-secondary border-t border-gh-border select-none">
         <span className={statusError ? "text-red-400" : ""}>{leftStatus}</span>
         <span>
