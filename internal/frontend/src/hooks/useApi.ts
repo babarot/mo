@@ -73,6 +73,12 @@ export async function resolveHomeFile(
   return res.json();
 }
 
+export async function fetchConfig(): Promise<{ homeDir: string }> {
+  const res = await fetch("/_/api/config");
+  if (!res.ok) throw new Error("Failed to fetch config");
+  return res.json();
+}
+
 export async function fetchFileContent(group: string, id: string): Promise<FileContent> {
   const res = await fetch(`${groupPath(group)}/files/${id}/content`);
   if (!res.ok) throw new Error("Failed to fetch file content");

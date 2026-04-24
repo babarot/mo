@@ -40,3 +40,16 @@ export function parseHomePathFromPath(pathname: string): string | null {
   if (rest === "") return null;
   return rest;
 }
+
+// toHomePathUrl builds a /~/... pathname for an absolute file path living
+// under homeDir. Returns null when the file is outside homeDir, when homeDir
+// is empty (feature disabled), or when inputs look malformed. The caller is
+// responsible for deciding what to do when the result is null (usually: leave
+// the current URL as-is).
+export function toHomePathUrl(absPath: string, homeDir: string): string | null {
+  if (!homeDir || !absPath) return null;
+  const prefix = homeDir.endsWith("/") ? homeDir : homeDir + "/";
+  if (absPath === homeDir) return "/~/";
+  if (!absPath.startsWith(prefix)) return null;
+  return `/~/${absPath.slice(prefix.length)}`;
+}

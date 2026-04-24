@@ -2240,3 +2240,50 @@ func TestHandleResolveHomeFile(t *testing.T) {
 		}
 	})
 }
+
+func TestHandleConfig(t *testing.T) {
+	home := t.TempDir()
+
+	decode := func(t *testing.T, body []byte) string {
+		t.Helper()
+		var resp struct {
+			HomeDir string `json:"homeDir"`
+		}
+		if err := json.Unmarshal(body, &resp); err != nil {
+			t.Fatal(err)
+		}
+		return resp.HomeDir
+	}
+
+	t.Run("exposes HomeDir to the SPA", func(t *testing.T) {
+		s := newTestState(t)
+		handler := NewHandler(s, HandlerConfig{HomeDir: home})
+
+		req := httptest.NewRequest("GET", "/_/api/config", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+		}
+		if got := decode(t, rec.Body.Bytes()); got != home {
+			t.Errorf("homeDir=%q, want %q", got, home)
+		}
+	})
+
+	t.Run("hides HomeDir when remote access is enabled", func(t *testing.T) {
+		s := newTestState(t)
+		handler := NewHandler(s, HandlerConfig{HomeDir: home, AllowRemoteAccess: true})
+
+		req := httptest.NewRequest("GET", "/_/api/config", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+		}
+		if got := decode(t, rec.Body.Bytes()); got != "" {
+			t.Errorf("homeDir=%q, want empty", got)
+		}
+	})
+}

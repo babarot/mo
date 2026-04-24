@@ -17,6 +17,7 @@ import { useActiveHeading } from "./hooks/useActiveHeading";
 import { useScrollRestoration, SCROLL_SESSION_KEY } from "./hooks/useScrollRestoration";
 import type { FileEntry, Group, SearchResult } from "./hooks/useApi";
 import {
+  fetchConfig,
   fetchGroups,
   fetchSearchResults,
   removeFile,
@@ -29,6 +30,7 @@ import {
   parseFileIdFromSearch,
   parseHomePathFromPath,
   groupToPath,
+  toHomePathUrl,
 } from "./utils/groups";
 import { isMarkdownFile } from "./utils/filetype";
 
@@ -214,6 +216,17 @@ export function App() {
   // path gets wiped before we can read it on the server.
   const pendingHomePathRef = useRef<string | null>(parseHomePathFromPath(window.location.pathname));
 
+  // $HOME value from the server, used to turn absolute file paths into the
+  // "/~/<rel>" permalink form as the user navigates between files. null means
+  // "not fetched yet"; empty string means the feature is disabled (remote
+  // access mode or the server could not resolve $HOME).
+  const [homeDir, setHomeDir] = useState<string | null>(null);
+  useEffect(() => {
+    fetchConfig()
+      .then((cfg) => setHomeDir(cfg.homeDir))
+      .catch(() => setHomeDir(""));
+  }, []);
+
   useEffect(() => {
     const relPath = pendingHomePathRef.current;
     if (!relPath) return;
@@ -253,6 +266,27 @@ export function App() {
       window.history.replaceState(null, "", expectedPath);
     }
   }, [activeGroup]);
+
+  // While in /~/ permalink mode, keep the URL pointing at the currently
+  // selected file so the address bar works as a shareable deep link. Only
+  // runs after the initial resolve has finished (pendingHomePathRef null)
+  // and the server has told us what $HOME is. Files outside $HOME have no
+  // /~/ representation, so we leave the URL untouched for those.
+  useEffect(() => {
+    if (pendingHomePathRef.current) return;
+    if (!homeDir) return;
+    if (!window.location.pathname.startsWith("/~/")) return;
+    if (!activeFileId) return;
+    const file = groups
+      .find((g) => g.name === activeGroup)
+      ?.files.find((f) => f.id === activeFileId);
+    if (!file?.path) return;
+    const next = toHomePathUrl(file.path, homeDir);
+    if (!next) return;
+    if (window.location.pathname !== next) {
+      window.history.replaceState(null, "", next);
+    }
+  }, [activeFileId, activeGroup, groups, homeDir]);
 
   // Clear search params after consuming initial file ID
   useEffect(() => {

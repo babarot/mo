@@ -1318,6 +1318,7 @@ func NewHandler(state *State, cfg HandlerConfig) http.Handler {
 	mux.HandleFunc("GET /_/api/groups/{group}/files/{id}/content", handleFileContent(state))
 	mux.HandleFunc("PUT /_/api/groups/{group}/files/{id}/content", handleSaveFileContent(state))
 	mux.HandleFunc("GET /_/api/files/resolve", handleResolveHomeFile(state, cfg))
+	mux.HandleFunc("GET /_/api/config", handleConfig(cfg))
 	mux.HandleFunc("GET /_/api/search", handleSearch(state))
 	mux.HandleFunc("GET /_/api/groups/{group}/files/{id}/raw/{path...}", handleFileRaw(state))
 	mux.HandleFunc("POST /_/api/groups/{group}/files/open", handleOpenFile(state))
@@ -1833,6 +1834,26 @@ func handleFileRaw(state *State) http.HandlerFunc {
 		}
 
 		http.ServeFile(w, r, absPath)
+	}
+}
+
+// handleConfig exposes the client-visible subset of HandlerConfig. Currently
+// it surfaces $HOME so the SPA can build "/~/<rel>" permalinks for files
+// located under it. HomeDir is omitted when disabled (empty cfg or
+// remote-access mode) so the SPA can detect that feature is off.
+func handleConfig(cfg HandlerConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		homeDir := cfg.HomeDir
+		if cfg.AllowRemoteAccess {
+			homeDir = ""
+		}
+		resp := struct {
+			HomeDir string `json:"homeDir"`
+		}{HomeDir: homeDir}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			slog.Error("failed to encode response", "error", err)
+		}
 	}
 }
 
