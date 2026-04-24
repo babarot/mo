@@ -221,23 +221,33 @@ export function App() {
       .then((result) => {
         pendingHomePathRef.current = null;
         if (result) {
+          // Use activeFileId directly rather than initialFileId: the
+          // render-time adjust block only consumes initialFileId when
+          // groups or activeGroup change, so if fetchGroups has already
+          // committed by the time resolve completes, initialFileId would
+          // be stuck unconsumed and the wrong file would stay selected.
           setActiveGroup(result.group);
-          setInitialFileId(result.id);
+          setActiveFileId(result.id);
         } else {
+          // Preserve the typed URL so the user can see what they tried to
+          // open. The default view renders behind it.
           console.warn(`mo: no registered file for ~/${relPath}`);
-          window.history.replaceState(null, "", "/");
         }
       })
       .catch((err) => {
         pendingHomePathRef.current = null;
         console.warn("mo: failed to resolve home path", err);
-        window.history.replaceState(null, "", "/");
       });
   }, []);
 
-  // Sync URL path with active group
+  // Sync URL path with active group. Preserve /~/ URLs: the user typed
+  // them deliberately and the group name is a derived detail, so
+  // rewriting the address bar would be surprising. They remain until
+  // the user navigates away explicitly (e.g., via the group dropdown,
+  // which calls pushState with the group path).
   useEffect(() => {
     if (pendingHomePathRef.current) return;
+    if (window.location.pathname.startsWith("/~/")) return;
     const expectedPath = groupToPath(activeGroup);
     if (window.location.pathname !== expectedPath) {
       window.history.replaceState(null, "", expectedPath);
