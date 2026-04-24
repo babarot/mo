@@ -16,8 +16,20 @@ import { useFileDrop } from "./hooks/useFileDrop";
 import { useActiveHeading } from "./hooks/useActiveHeading";
 import { useScrollRestoration, SCROLL_SESSION_KEY } from "./hooks/useScrollRestoration";
 import type { FileEntry, Group, SearchResult } from "./hooks/useApi";
-import { fetchGroups, fetchSearchResults, removeFile, reorderFiles } from "./hooks/useApi";
-import { allFileIds, parseGroupFromPath, parseFileIdFromSearch, groupToPath } from "./utils/groups";
+import {
+  fetchGroups,
+  fetchSearchResults,
+  removeFile,
+  reorderFiles,
+  resolveHomeFile,
+} from "./hooks/useApi";
+import {
+  allFileIds,
+  parseGroupFromPath,
+  parseFileIdFromSearch,
+  parseHomePathFromPath,
+  groupToPath,
+} from "./utils/groups";
 import { isMarkdownFile } from "./utils/filetype";
 
 const VIEWMODE_STORAGE_KEY = "mo-sidebar-viewmode";
@@ -58,9 +70,13 @@ export function isTocOpenForFile(
 
 export function App() {
   const [groups, setGroups] = useState<Group[]>([]);
-  const [activeGroup, setActiveGroup] = useState<string>(
-    () => parseGroupFromPath(window.location.pathname) || "default",
-  );
+  const [activeGroup, setActiveGroup] = useState<string>(() => {
+    // When the URL uses the /~/ home-path scheme, the pathname is not a group
+    // name. Start with "default" and let the resolve effect below overwrite
+    // activeGroup once we know which group the file belongs to.
+    if (parseHomePathFromPath(window.location.pathname)) return "default";
+    return parseGroupFromPath(window.location.pathname) || "default";
+  });
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tocOpenMap, setTocOpenMap] = useState<Record<string, boolean>>(getInitialTocOpenMap);
@@ -193,8 +209,35 @@ export function App() {
       .catch(() => {});
   }, []);
 
+  // Resolve /~/ URLs on mount. While this is pending, we must not let the
+  // "sync URL with active group" effect rewrite the pathname, or the home
+  // path gets wiped before we can read it on the server.
+  const pendingHomePathRef = useRef<string | null>(parseHomePathFromPath(window.location.pathname));
+
+  useEffect(() => {
+    const relPath = pendingHomePathRef.current;
+    if (!relPath) return;
+    resolveHomeFile(relPath)
+      .then((result) => {
+        pendingHomePathRef.current = null;
+        if (result) {
+          setActiveGroup(result.group);
+          setInitialFileId(result.id);
+        } else {
+          console.warn(`mo: no registered file for ~/${relPath}`);
+          window.history.replaceState(null, "", "/");
+        }
+      })
+      .catch((err) => {
+        pendingHomePathRef.current = null;
+        console.warn("mo: failed to resolve home path", err);
+        window.history.replaceState(null, "", "/");
+      });
+  }, []);
+
   // Sync URL path with active group
   useEffect(() => {
+    if (pendingHomePathRef.current) return;
     const expectedPath = groupToPath(activeGroup);
     if (window.location.pathname !== expectedPath) {
       window.history.replaceState(null, "", expectedPath);
@@ -381,12 +424,15 @@ export function App() {
     activeFileId,
   );
 
-  const handleHeadingClick = useCallback((id: string) => {
-    const el = document.getElementById(id);
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const behavior = settings.smoothScroll && !reduced ? "smooth" : "auto";
-    el?.scrollIntoView({ behavior, block: "start" });
-  }, [settings.smoothScroll]);
+  const handleHeadingClick = useCallback(
+    (id: string) => {
+      const el = document.getElementById(id);
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const behavior = settings.smoothScroll && !reduced ? "smooth" : "auto";
+      el?.scrollIntoView({ behavior, block: "start" });
+    },
+    [settings.smoothScroll],
+  );
 
   const handleZoom = useCallback((content: ZoomContent) => {
     setZoomContent(content);
@@ -460,10 +506,7 @@ export function App() {
         {sidebarOpen && (
           <>
             {settings.sidebarOverlay && (
-              <div
-                className="absolute inset-0 z-20"
-                onClick={() => setSidebarOpen(false)}
-              />
+              <div className="absolute inset-0 z-20" onClick={() => setSidebarOpen(false)} />
             )}
             <Sidebar
               groups={groups}
@@ -524,10 +567,7 @@ export function App() {
           </div>
           {tocOpen && settings.tocFloating && (
             <>
-              <div
-                className="absolute inset-0 z-20"
-                onClick={() => setTocOpen(false)}
-              />
+              <div className="absolute inset-0 z-20" onClick={() => setTocOpen(false)} />
               <TocPanel
                 headings={headings}
                 activeHeadingId={activeHeadingId}

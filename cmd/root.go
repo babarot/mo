@@ -1358,7 +1358,11 @@ func startServer(ctx context.Context, addr string, filesByGroup map[string][]str
 		return fmt.Errorf("all %d file(s) were skipped", totalFiles)
 	}
 
-	handler := server.NewHandler(state)
+	homeDir, _ := os.UserHomeDir()
+	handler := server.NewHandler(state, server.HandlerConfig{
+		AllowRemoteAccess: dangerouslyAllowRemoteAccess,
+		HomeDir:           homeDir,
+	})
 
 	srv := &http.Server{
 		Addr:              addr,

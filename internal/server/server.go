@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -380,6 +381,44 @@ func (s *State) FindFile(id, groupName string) *FileEntry {
 		}
 	}
 	return nil
+}
+
+// FindFileByPath returns a registered (non-uploaded) file whose absolute path
+// matches absPath, along with the group it belongs to. When the same path is
+// registered in multiple groups, it returns the hit in the default group
+// first, otherwise the hit in the group with the smallest name in Go string
+// order. The two-step rule keeps results deterministic across restarts so that
+// share URLs stay stable.
+func (s *State) FindFileByPath(absPath string) (*FileEntry, string) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if g, ok := s.groups[DefaultGroup]; ok {
+		for _, f := range g.Files {
+			if !f.Uploaded && f.Path == absPath {
+				return f, DefaultGroup
+			}
+		}
+	}
+
+	names := make([]string, 0, len(s.groups))
+	for name := range s.groups {
+		if name == DefaultGroup {
+			continue
+		}
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		g := s.groups[name]
+		for _, f := range g.Files {
+			if !f.Uploaded && f.Path == absPath {
+				return f, name
+			}
+		}
+	}
+	return nil, ""
 }
 
 func (s *State) SaveFileContent(id, groupName, content string) error {
@@ -1258,7 +1297,16 @@ func resolveGroupFromPath(r *http.Request) (string, error) {
 	return ResolveGroupName(r.PathValue("group"))
 }
 
-func NewHandler(state *State) http.Handler {
+// HandlerConfig carries runtime settings that HTTP handlers need but that live
+// outside of the shared State. Zero value is safe (AllowRemoteAccess=false,
+// HomeDir=""); handlers that require HomeDir should treat "" as "feature
+// disabled" so the default behavior is the safer one.
+type HandlerConfig struct {
+	AllowRemoteAccess bool
+	HomeDir           string
+}
+
+func NewHandler(state *State, cfg HandlerConfig) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /_/api/groups/{group}/files", handleAddFile(state))
@@ -1269,6 +1317,7 @@ func NewHandler(state *State) http.Handler {
 	mux.HandleFunc("PUT /_/api/groups/{group}/reorder", handleReorderFiles(state))
 	mux.HandleFunc("GET /_/api/groups/{group}/files/{id}/content", handleFileContent(state))
 	mux.HandleFunc("PUT /_/api/groups/{group}/files/{id}/content", handleSaveFileContent(state))
+	mux.HandleFunc("GET /_/api/files/resolve", handleResolveHomeFile(state, cfg))
 	mux.HandleFunc("GET /_/api/search", handleSearch(state))
 	mux.HandleFunc("GET /_/api/groups/{group}/files/{id}/raw/{path...}", handleFileRaw(state))
 	mux.HandleFunc("POST /_/api/groups/{group}/files/open", handleOpenFile(state))
@@ -1784,6 +1833,75 @@ func handleFileRaw(state *State) http.HandlerFunc {
 		}
 
 		http.ServeFile(w, r, absPath)
+	}
+}
+
+// handleResolveHomeFile resolves a path like "~/foo/bar.md" to a registered
+// file entry, returning the group and file ID. It is only meaningful when the
+// server knows $HOME and is not running in remote-access mode; both are
+// guarded here so misconfigured callers get a 404 rather than silent success.
+func handleResolveHomeFile(state *State, cfg HandlerConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if cfg.AllowRemoteAccess || cfg.HomeDir == "" {
+			http.NotFound(w, r)
+			return
+		}
+
+		raw := r.URL.Query().Get("path")
+		if raw == "" {
+			http.Error(w, "path parameter is required", http.StatusBadRequest)
+			return
+		}
+
+		decoded, err := url.QueryUnescape(raw)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Only accept home-relative input: "~/..." or a path with no leading
+		// slash. Refusing absolute paths keeps the URL scheme unambiguous and
+		// avoids accidentally exposing arbitrary filesystem locations.
+		if strings.HasPrefix(decoded, "/") {
+			http.Error(w, "absolute paths are not accepted", http.StatusBadRequest)
+			return
+		}
+
+		var joined string
+		switch {
+		case decoded == "~":
+			joined = cfg.HomeDir
+		case strings.HasPrefix(decoded, "~/"):
+			joined = filepath.Join(cfg.HomeDir, decoded[2:])
+		default:
+			joined = filepath.Join(cfg.HomeDir, decoded)
+		}
+
+		cleaned := filepath.Clean(joined)
+
+		// Guard against traversal outside $HOME. filepath.Rel returns a path
+		// starting with ".." when the target is outside the base.
+		rel, err := filepath.Rel(cfg.HomeDir, cleaned)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			http.NotFound(w, r)
+			return
+		}
+
+		entry, group := state.FindFileByPath(cleaned)
+		if entry == nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		resp := struct {
+			Group string `json:"group"`
+			ID    string `json:"id"`
+		}{Group: group, ID: entry.ID}
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			slog.Error("failed to encode response", "error", err)
+		}
 	}
 }
 

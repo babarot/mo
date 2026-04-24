@@ -233,7 +233,7 @@ func TestHandleMoveFile(t *testing.T) {
 			Files: []*FileEntry{{ID: idB, Name: "b.md", Path: "/b.md"}},
 		}
 
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		body, err := json.Marshal(moveFileRequest{Group: "dst"})
 		if err != nil {
 			t.Fatal(err)
@@ -263,7 +263,7 @@ func TestHandleMoveFile(t *testing.T) {
 			Files: []*FileEntry{{ID: idA, Name: "a.md", Path: "/a.md"}},
 		}
 
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		body, err := json.Marshal(moveFileRequest{Group: "dst"})
 		if err != nil {
 			t.Fatal(err)
@@ -283,7 +283,7 @@ func TestHandleMoveFile(t *testing.T) {
 func TestHandleShutdown(t *testing.T) {
 	t.Run("returns 202 and signals shutdownCh", func(t *testing.T) {
 		s := newTestState(t)
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		req := httptest.NewRequest("POST", "/_/api/shutdown", nil)
 		rec := httptest.NewRecorder()
 
@@ -302,7 +302,7 @@ func TestHandleShutdown(t *testing.T) {
 
 	t.Run("does not block on duplicate signal", func(t *testing.T) {
 		s := newTestState(t)
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 
 		for i := range 2 {
 			req := httptest.NewRequest("POST", "/_/api/shutdown", nil)
@@ -324,7 +324,7 @@ func TestHandleRestart(t *testing.T) {
 			Name:  DefaultGroup,
 			Files: []*FileEntry{{ID: idA, Name: "a.md", Path: "/a.md"}},
 		}
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		req := httptest.NewRequest("POST", "/_/api/restart", nil)
 		rec := httptest.NewRecorder()
 
@@ -353,7 +353,7 @@ func TestHandleRestart(t *testing.T) {
 			Name:  DefaultGroup,
 			Files: []*FileEntry{{ID: idA, Name: "a.md", Path: "/a.md"}},
 		}
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 
 		for i := range 2 {
 			req := httptest.NewRequest("POST", "/_/api/restart", nil)
@@ -389,7 +389,7 @@ func TestHandleReorderFiles(t *testing.T) {
 			},
 		}
 
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		body, err := json.Marshal(reorderFilesRequest{FileIDs: []string{idB, idA}})
 		if err != nil {
 			t.Fatal(err)
@@ -420,7 +420,7 @@ func TestHandleReorderFiles(t *testing.T) {
 			},
 		}
 
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		body, err := json.Marshal(reorderFilesRequest{FileIDs: []string{idB, idA}})
 		if err != nil {
 			t.Fatal(err)
@@ -443,7 +443,7 @@ func TestHandleReorderFiles(t *testing.T) {
 
 	t.Run("returns 400 for invalid group", func(t *testing.T) {
 		s := newTestState(t)
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		body, err := json.Marshal(reorderFilesRequest{FileIDs: []string{idA}})
 		if err != nil {
 			t.Fatal(err)
@@ -462,7 +462,7 @@ func TestHandleReorderFiles(t *testing.T) {
 	t.Run("returns 400 for invalid JSON", func(t *testing.T) {
 		s := newTestState(t)
 		s.groups[DefaultGroup] = &Group{Name: DefaultGroup, Files: []*FileEntry{}}
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		req := httptest.NewRequest("PUT", "/_/api/groups/default/reorder", bytes.NewReader([]byte("invalid")))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
@@ -762,7 +762,7 @@ func TestHandleRemovePattern(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		body, err := json.Marshal(patternRequest{Pattern: pattern, Group: DefaultGroup})
 		if err != nil {
 			t.Fatal(err)
@@ -780,7 +780,7 @@ func TestHandleRemovePattern(t *testing.T) {
 
 	t.Run("returns 404 for unknown pattern", func(t *testing.T) {
 		s := newTestState(t)
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		body, err := json.Marshal(patternRequest{Pattern: "/nonexistent/*.md", Group: DefaultGroup})
 		if err != nil {
 			t.Fatal(err)
@@ -808,7 +808,7 @@ func TestHandleStatus_PatternsInGroups(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	handler := NewHandler(s)
+	handler := NewHandler(s, HandlerConfig{})
 	req := httptest.NewRequest("GET", "/_/api/status", nil)
 	rec := httptest.NewRecorder()
 
@@ -841,7 +841,7 @@ func TestHandleAddPattern(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "a.md"), []byte("# A"), 0o600) //nolint:errcheck
 
 	s := newTestState(t)
-	handler := NewHandler(s)
+	handler := NewHandler(s, HandlerConfig{})
 
 	pattern := filepath.Join(dir, "*.md")
 	body, err := json.Marshal(patternRequest{Pattern: pattern, Group: DefaultGroup})
@@ -1269,7 +1269,7 @@ func TestHandleAddFile_RejectsBinaryFile(t *testing.T) {
 
 	t.Run("returns 400 for binary file", func(t *testing.T) {
 		s := newTestState(t)
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 
 		binFile := filepath.Join(dir, "image.png")
 		os.WriteFile(binFile, []byte{0x89, 0x50, 0x4e, 0x47, 0x00}, 0o600) //nolint:errcheck
@@ -1291,7 +1291,7 @@ func TestHandleAddFile_RejectsBinaryFile(t *testing.T) {
 
 	t.Run("returns 200 for text file", func(t *testing.T) {
 		s := newTestState(t)
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 
 		txtFile := filepath.Join(dir, "readme.md")
 		os.WriteFile(txtFile, []byte("# Hello"), 0o600) //nolint:errcheck
@@ -1323,7 +1323,7 @@ func TestHandleAddFile_RejectsBinaryFile(t *testing.T) {
 func TestHandleUploadFile(t *testing.T) {
 	t.Run("uploads file via HTTP", func(t *testing.T) {
 		s := newTestState(t)
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 
 		body, err := json.Marshal(uploadFileRequest{Name: "test.md", Content: "# Hello"})
 		if err != nil {
@@ -1353,7 +1353,7 @@ func TestHandleUploadFile(t *testing.T) {
 
 	t.Run("returns 413 for oversized content", func(t *testing.T) {
 		s := newTestState(t)
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 
 		oversized := strings.Repeat("x", 10<<20+1) // 10MB + 1 byte
 		body, err := json.Marshal(uploadFileRequest{Name: "big.md", Content: oversized})
@@ -1373,7 +1373,7 @@ func TestHandleUploadFile(t *testing.T) {
 
 	t.Run("returns 400 for missing name", func(t *testing.T) {
 		s := newTestState(t)
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 
 		body, err := json.Marshal(uploadFileRequest{Name: "", Content: "# Hello"})
 		if err != nil {
@@ -1396,7 +1396,7 @@ func TestUploadedFileContent(t *testing.T) {
 		s := newTestState(t)
 		entry := s.AddUploadedFile("test.md", "# Uploaded Content", DefaultGroup)
 
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		req := httptest.NewRequest("GET", fmt.Sprintf("/_/api/groups/default/files/%s/content", entry.ID), nil)
 		rec := httptest.NewRecorder()
 
@@ -1422,7 +1422,7 @@ func TestUploadedFileContent(t *testing.T) {
 		s := newTestState(t)
 		entry := s.AddUploadedFile("test.md", "# Hello", DefaultGroup)
 
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		req := httptest.NewRequest("GET", fmt.Sprintf("/_/api/groups/default/files/%s/raw/image.png", entry.ID), nil)
 		rec := httptest.NewRecorder()
 
@@ -1437,7 +1437,7 @@ func TestUploadedFileContent(t *testing.T) {
 		s := newTestState(t)
 		entry := s.AddUploadedFile("test.md", "# Hello", DefaultGroup)
 
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		body, err := json.Marshal(openFileRequest{FileID: entry.ID, Path: "./other.md"})
 		if err != nil {
 			t.Fatal(err)
@@ -1475,7 +1475,7 @@ func TestSearch(t *testing.T) {
 		}
 		s.AddUploadedFile("upload.md", "# Upload\ncache line\n", "docs")
 
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		req := httptest.NewRequest("GET", "/_/api/search?q=cache&group=default&limit=10&context=1", nil)
 		rec := httptest.NewRecorder()
 
@@ -1519,7 +1519,7 @@ func TestSearch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		req := httptest.NewRequest("GET", "/_/api/search?q=find+me&group=default&context=0", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -1558,7 +1558,7 @@ func TestSearch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 		req := httptest.NewRequest("GET", "/_/api/search?q=find+me&group=default&context=0", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -1577,7 +1577,7 @@ func TestSearch(t *testing.T) {
 
 	t.Run("returns 400 for missing query", func(t *testing.T) {
 		s := newTestState(t)
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 
 		req := httptest.NewRequest("GET", "/_/api/search?group=default", nil)
 		rec := httptest.NewRecorder()
@@ -1591,7 +1591,7 @@ func TestSearch(t *testing.T) {
 
 	t.Run("returns 404 for unknown group", func(t *testing.T) {
 		s := newTestState(t)
-		handler := NewHandler(s)
+		handler := NewHandler(s, HandlerConfig{})
 
 		req := httptest.NewRequest("GET", "/_/api/search?q=cache&group=missing", nil)
 		rec := httptest.NewRecorder()
@@ -1884,7 +1884,7 @@ func TestHandleGroups_IncludesTitle(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	handler := NewHandler(s)
+	handler := NewHandler(s, HandlerConfig{})
 	req := httptest.NewRequest("GET", "/_/api/groups", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -1907,7 +1907,7 @@ func TestHandleGroups_IncludesTitle(t *testing.T) {
 
 func TestCSPHeader(t *testing.T) {
 	s := newTestState(t)
-	handler := NewHandler(s)
+	handler := NewHandler(s, HandlerConfig{})
 
 	routes := []struct {
 		method string
@@ -1986,7 +1986,7 @@ func TestHandleOpenFile_PercentEncodedNonASCII(t *testing.T) {
 		},
 	}
 
-	handler := NewHandler(s)
+	handler := NewHandler(s, HandlerConfig{})
 
 	// Simulate browser behavior: percent-encode the non-ASCII filename
 	encodedPath := url.PathEscape("日本語ファイル.md")
@@ -2036,7 +2036,7 @@ func TestHandleFileRaw_PercentEncodedNonASCII(t *testing.T) {
 		},
 	}
 
-	handler := NewHandler(s)
+	handler := NewHandler(s, HandlerConfig{})
 
 	// Percent-encode the non-ASCII filename in the URL path
 	encodedName := url.PathEscape("画像.txt")
@@ -2054,4 +2054,189 @@ func TestHandleFileRaw_PercentEncodedNonASCII(t *testing.T) {
 	if !strings.Contains(got, "asset content") {
 		t.Errorf("expected body to contain %q, got %q", "asset content", got)
 	}
+}
+
+func TestHandleResolveHomeFile(t *testing.T) {
+	home := t.TempDir()
+	notesDir := filepath.Join(home, "notes")
+	if err := os.MkdirAll(notesDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	targetPath := filepath.Join(notesDir, "foo.md")
+	if err := os.WriteFile(targetPath, []byte("# hi"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	newHandler := func(setup func(s *State), cfg HandlerConfig) http.Handler {
+		s := newTestState(t)
+		if setup != nil {
+			setup(s)
+		}
+		return NewHandler(s, cfg)
+	}
+
+	addFile := func(s *State, group, path string, uploaded bool) {
+		g, ok := s.groups[group]
+		if !ok {
+			g = &Group{Name: group}
+			s.groups[group] = g
+		}
+		g.Files = append(g.Files, &FileEntry{
+			ID:       FileID(path),
+			Name:     filepath.Base(path),
+			Path:     path,
+			Uploaded: uploaded,
+		})
+	}
+
+	baseCfg := HandlerConfig{HomeDir: home}
+
+	t.Run("resolves registered home file", func(t *testing.T) {
+		handler := newHandler(func(s *State) {
+			addFile(s, DefaultGroup, targetPath, false)
+		}, baseCfg)
+
+		req := httptest.NewRequest("GET", "/_/api/files/resolve?path=~/notes/foo.md", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+		}
+		var resp struct {
+			Group string `json:"group"`
+			ID    string `json:"id"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+			t.Fatal(err)
+		}
+		if resp.Group != DefaultGroup || resp.ID != FileID(targetPath) {
+			t.Errorf("got %+v", resp)
+		}
+	})
+
+	t.Run("prefers default group on duplicates", func(t *testing.T) {
+		handler := newHandler(func(s *State) {
+			addFile(s, "z-other", targetPath, false)
+			addFile(s, "a-other", targetPath, false)
+			addFile(s, DefaultGroup, targetPath, false)
+		}, baseCfg)
+
+		req := httptest.NewRequest("GET", "/_/api/files/resolve?path=~/notes/foo.md", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		var resp struct {
+			Group string `json:"group"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+			t.Fatal(err)
+		}
+		if resp.Group != DefaultGroup {
+			t.Errorf("want default, got %q", resp.Group)
+		}
+	})
+
+	t.Run("falls back to smallest group name when default absent", func(t *testing.T) {
+		handler := newHandler(func(s *State) {
+			addFile(s, "z-other", targetPath, false)
+			addFile(s, "a-other", targetPath, false)
+		}, baseCfg)
+
+		req := httptest.NewRequest("GET", "/_/api/files/resolve?path=~/notes/foo.md", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		var resp struct {
+			Group string `json:"group"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+			t.Fatal(err)
+		}
+		if resp.Group != "a-other" {
+			t.Errorf("want a-other, got %q", resp.Group)
+		}
+	})
+
+	t.Run("unregistered path returns 404", func(t *testing.T) {
+		handler := newHandler(nil, baseCfg)
+		req := httptest.NewRequest("GET", "/_/api/files/resolve?path=~/notes/foo.md", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("got %d want 404", rec.Code)
+		}
+	})
+
+	t.Run("traversal outside HOME returns 404", func(t *testing.T) {
+		handler := newHandler(func(s *State) {
+			addFile(s, DefaultGroup, targetPath, false)
+		}, baseCfg)
+
+		req := httptest.NewRequest("GET", "/_/api/files/resolve?path=~/../etc/passwd", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("got %d want 404", rec.Code)
+		}
+	})
+
+	t.Run("absolute path is rejected", func(t *testing.T) {
+		handler := newHandler(nil, baseCfg)
+		req := httptest.NewRequest("GET", "/_/api/files/resolve?path=/etc/passwd", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("got %d want 400", rec.Code)
+		}
+	})
+
+	t.Run("remote access disables endpoint", func(t *testing.T) {
+		handler := newHandler(func(s *State) {
+			addFile(s, DefaultGroup, targetPath, false)
+		}, HandlerConfig{HomeDir: home, AllowRemoteAccess: true})
+
+		req := httptest.NewRequest("GET", "/_/api/files/resolve?path=~/notes/foo.md", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("got %d want 404", rec.Code)
+		}
+	})
+
+	t.Run("empty HomeDir disables endpoint", func(t *testing.T) {
+		handler := newHandler(func(s *State) {
+			addFile(s, DefaultGroup, targetPath, false)
+		}, HandlerConfig{})
+
+		req := httptest.NewRequest("GET", "/_/api/files/resolve?path=~/notes/foo.md", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("got %d want 404", rec.Code)
+		}
+	})
+
+	t.Run("uploaded entries are skipped", func(t *testing.T) {
+		handler := newHandler(func(s *State) {
+			addFile(s, DefaultGroup, targetPath, true)
+		}, baseCfg)
+
+		req := httptest.NewRequest("GET", "/_/api/files/resolve?path=~/notes/foo.md", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("got %d want 404", rec.Code)
+		}
+	})
+
+	t.Run("missing path parameter returns 400", func(t *testing.T) {
+		handler := newHandler(nil, baseCfg)
+		req := httptest.NewRequest("GET", "/_/api/files/resolve", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("got %d want 400", rec.Code)
+		}
+	})
 }

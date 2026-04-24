@@ -64,6 +64,15 @@ export async function fetchGroups(): Promise<Group[]> {
   return res.json();
 }
 
+export async function resolveHomeFile(
+  relPath: string,
+): Promise<{ group: string; id: string } | null> {
+  const res = await fetch(`/_/api/files/resolve?path=${encodeURIComponent(`~/${relPath}`)}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to resolve home path");
+  return res.json();
+}
+
 export async function fetchFileContent(group: string, id: string): Promise<FileContent> {
   const res = await fetch(`${groupPath(group)}/files/${id}/content`);
   if (!res.ok) throw new Error("Failed to fetch file content");

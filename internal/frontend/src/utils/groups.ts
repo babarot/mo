@@ -29,3 +29,14 @@ export function parseFileIdFromSearch(search: string): string | null {
   if (raw == null || raw === "") return null;
   return raw;
 }
+
+// parseHomePathFromPath returns the home-relative portion of a /~/... URL,
+// or null if the URL does not use the /~/ prefix. The prefix is reserved so
+// /~/foo never collides with a group named "~/foo" because callers evaluate
+// this before parseGroupFromPath.
+export function parseHomePathFromPath(pathname: string): string | null {
+  if (!pathname.startsWith("/~/")) return null;
+  const rest = pathname.slice(3);
+  if (rest === "") return null;
+  return rest;
+}

@@ -5,6 +5,7 @@ import {
   groupToPath,
   buildFileUrl,
   parseFileIdFromSearch,
+  parseHomePathFromPath,
 } from "./groups";
 import type { Group } from "../hooks/useApi";
 
@@ -116,5 +117,25 @@ describe("parseFileIdFromSearch", () => {
 
   it("returns null for empty value", () => {
     expect(parseFileIdFromSearch("?file=")).toBeNull();
+  });
+});
+
+describe("parseHomePathFromPath", () => {
+  it("returns null for non-tilde paths", () => {
+    expect(parseHomePathFromPath("/")).toBeNull();
+    expect(parseHomePathFromPath("/design")).toBeNull();
+    expect(parseHomePathFromPath("/~foo")).toBeNull();
+  });
+
+  it("returns null for bare /~/", () => {
+    expect(parseHomePathFromPath("/~/")).toBeNull();
+  });
+
+  it("extracts the home-relative path", () => {
+    expect(parseHomePathFromPath("/~/foo")).toBe("foo");
+    expect(parseHomePathFromPath("/~/a/b.md")).toBe("a/b.md");
+    expect(parseHomePathFromPath("/~/src/github.com/x/y/README.md")).toBe(
+      "src/github.com/x/y/README.md",
+    );
   });
 });
