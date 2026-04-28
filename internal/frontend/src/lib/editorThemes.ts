@@ -399,11 +399,16 @@ function buildTheme(colors: EditorThemeColors): Extension[] {
       color: colors.gutterText,
       borderRight: `1px solid ${colors.gutterBorder}`,
     },
+    // Active line highlights are intentionally transparent. CodeMirror paints
+    // .cm-activeLine as a solid line background and .cm-selectionBackground
+    // as a semi-transparent overlay; with both opaque, the selection blends
+    // back into the active line and becomes invisible. We keep the cursor
+    // alone as the "where am I" indicator.
     ".cm-activeLineGutter": {
-      backgroundColor: colors.activeGutterBg,
+      backgroundColor: "transparent",
     },
     ".cm-activeLine": {
-      backgroundColor: colors.activeLineBg,
+      backgroundColor: "transparent",
     },
     ".cm-cursor": {
       borderLeftColor: colors.cursor,
