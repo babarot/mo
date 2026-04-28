@@ -21,10 +21,7 @@
     },
     "onlyBuiltDependencies": [
       "esbuild"
-    ],
-    "patchedDependencies": {
-      "@vimee/plugin-codemirror": "patches/@vimee__plugin-codemirror.patch"
-    }
+    ]
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.0",
@@ -38,8 +35,6 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@lezer/highlight": "^1.2.3",
     "@shikijs/rehype": "^4.0.2",
-    "@vimee/core": "^0.3.0",
-    "@vimee/plugin-codemirror": "^0.2.0",
     "codemirror": "^6.0.2",
     "github-markdown-css": "^5.8.1",
     "katex": "^0.16.45",

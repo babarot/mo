@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  '@vimee/plugin-codemirror':
-    hash: 0d8873fe06d551461a585b8817356b68574f01e13e60257fa0d4137b76f94e69
-    path: patches/@vimee__plugin-codemirror.patch
-
 importers:
 
   .:
@@ -46,12 +41,6 @@ importers:
       '@shikijs/rehype':
         specifier: ^4.0.2
         version: 4.0.2
-      '@vimee/core':
-        specifier: ^0.3.0
-        version: 0.3.0
-      '@vimee/plugin-codemirror':
-        specifier: ^0.2.0
-        version: 0.2.0(patch_hash=0d8873fe06d551461a585b8817356b68574f01e13e60257fa0d4137b76f94e69)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(@vimee/core@0.3.0)
       codemirror:
         specifier: ^6.0.2
         version: 6.0.2
@@ -1399,16 +1388,6 @@ packages:
 
   '@upsetjs/venn.js@2.0.0':
     resolution: {integrity: sha512-WbBhLrooyePuQ1VZxrJjtLvTc4NVfpOyKx0sKqioq9bX1C1m7Jgykkn8gLrtwumBioXIqam8DLxp88Adbue6Hw==}
-
-  '@vimee/core@0.3.0':
-    resolution: {integrity: sha512-aC44fw6HhmjrbJMafAk3oUZIDpFbgNebbDsWwMIFD0WwnOUZPETgzU3HYQetmwz0e38JY3I/g8CJXRQjspgJZw==}
-
-  '@vimee/plugin-codemirror@0.2.0':
-    resolution: {integrity: sha512-6cKvWeNQiSAIRqLXZcbzO/yYfaKYsKwDb4wJM+oNV3Y0nx0oYeGkJu+iFDB9k6kjPv/SmCkDalt35bKf/cAoFw==}
-    peerDependencies:
-      '@codemirror/state': ^6.0.0
-      '@codemirror/view': ^6.0.0
-      '@vimee/core': '>=0.1.0 <1.0.0'
 
   '@vitejs/plugin-react@6.0.1':
     resolution: {integrity: sha512-l9X/E3cDb+xY3SWzlG1MOGt2usfEHGMNIaegaUGFsLkb3RCn/k8/TOXBcab+OndDI4TBtktT8/9BwwW8Vi9KUQ==}
@@ -3947,14 +3926,6 @@ snapshots:
     optionalDependencies:
       d3-selection: 3.0.0
       d3-transition: 3.0.1(d3-selection@3.0.0)
-
-  '@vimee/core@0.3.0': {}
-
-  '@vimee/plugin-codemirror@0.2.0(patch_hash=0d8873fe06d551461a585b8817356b68574f01e13e60257fa0d4137b76f94e69)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)(@vimee/core@0.3.0)':
-    dependencies:
-      '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
-      '@vimee/core': 0.3.0
 
   '@vitejs/plugin-react@6.0.1(vite@8.0.8(esbuild@0.27.3)(jiti@2.6.1))':
     dependencies:

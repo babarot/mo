@@ -381,12 +381,15 @@ export function App() {
     activeFileId,
   );
 
-  const handleHeadingClick = useCallback((id: string) => {
-    const el = document.getElementById(id);
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const behavior = settings.smoothScroll && !reduced ? "smooth" : "auto";
-    el?.scrollIntoView({ behavior, block: "start" });
-  }, [settings.smoothScroll]);
+  const handleHeadingClick = useCallback(
+    (id: string) => {
+      const el = document.getElementById(id);
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const behavior = settings.smoothScroll && !reduced ? "smooth" : "auto";
+      el?.scrollIntoView({ behavior, block: "start" });
+    },
+    [settings.smoothScroll],
+  );
 
   const handleZoom = useCallback((content: ZoomContent) => {
     setZoomContent(content);
@@ -460,10 +463,7 @@ export function App() {
         {sidebarOpen && (
           <>
             {settings.sidebarOverlay && (
-              <div
-                className="absolute inset-0 z-20"
-                onClick={() => setSidebarOpen(false)}
-              />
+              <div className="absolute inset-0 z-20" onClick={() => setSidebarOpen(false)} />
             )}
             <Sidebar
               groups={groups}
@@ -508,7 +508,6 @@ export function App() {
                 editorLineWrapping={settings.editorLineWrapping}
                 editorAutoSave={settings.editorAutoSave}
                 editorColorScheme={settings.editorColorScheme}
-                editorBlockCursor={settings.editorBlockCursor}
                 onEditStateChange={setIsEditing}
                 onZoom={handleZoom}
                 scrollToHeading={pendingSearchHeading}
@@ -524,10 +523,7 @@ export function App() {
           </div>
           {tocOpen && settings.tocFloating && (
             <>
-              <div
-                className="absolute inset-0 z-20"
-                onClick={() => setTocOpen(false)}
-              />
+              <div className="absolute inset-0 z-20" onClick={() => setTocOpen(false)} />
               <TocPanel
                 headings={headings}
                 activeHeadingId={activeHeadingId}

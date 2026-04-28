@@ -211,13 +211,10 @@ body,
   color: var(--fgColor-danger);
 }
 
-/* Vim editor (CodeMirror) integration */
-.mo-vim-editor .cm-editor {
+/* CodeMirror editor */
+.mo-editor .cm-editor {
   font-family: "Menlo", "Monaco", "Courier New", monospace;
   font-size: 14px;
-}
-.vim-visual .cm-activeLine {
-  background-color: transparent !important;
 }
 
 [data-theme="dark"] .markdown-body {

@@ -14,7 +14,7 @@ import { fetchFileContent, openRelativeFile } from "../hooks/useApi";
 import { escapeRegExp } from "../utils/regex";
 import { RawToggle } from "./RawToggle";
 import { EditToggle } from "./EditToggle";
-import { VimEditor, type VimEditorHandle } from "./VimEditor";
+import { Editor, type EditorHandle } from "./Editor";
 import { TocToggle } from "./TocToggle";
 import { CopyButton } from "./CopyButton";
 import { CloseFileButton } from "./CloseFileButton";
@@ -85,7 +85,6 @@ interface MarkdownViewerProps {
   editorLineWrapping?: boolean;
   editorAutoSave?: boolean;
   editorColorScheme?: string;
-  editorBlockCursor?: boolean;
   scrollContainer?: HTMLElement | null;
   onEditStateChange?: (editing: boolean) => void;
 }
@@ -679,7 +678,6 @@ export function MarkdownViewer({
   editorLineWrapping = true,
   editorAutoSave = false,
   editorColorScheme = "default",
-  editorBlockCursor = true,
   scrollContainer,
   onEditStateChange,
 }: MarkdownViewerProps) {
@@ -691,15 +689,32 @@ export function MarkdownViewer({
     onEditStateChange?.(isEditView || isRawView);
   }, [isEditView, isRawView, onEditStateChange]);
   const [editAnchor, setEditAnchor] = useState<ScrollAnchor | null>(null);
-  const vimEditorRef = useRef<VimEditorHandle>(null);
+  const editorRef = useRef<EditorHandle>(null);
+  const editTargetRef = useRef<{ group: string; fileId: string } | null>(null);
   const [searchHitMarkers, setSearchHitMarkers] = useState<SearchHitMarker[]>([]);
   const articleRef = useRef<HTMLElement>(null);
   const [prevFetchKey, setPrevFetchKey] = useState({ fileId, revision });
 
+  // Detect file switches that happen while the editor is open. Saving has to
+  // run from an effect (not the render-phase prevFetchKey block below) so it
+  // does not get duplicated under StrictMode's double-invocation. The next
+  // effect updates editTargetRef AFTER this one fires so we read the OLD
+  // target here before it gets overwritten.
+  useEffect(() => {
+    const target = editTargetRef.current;
+    if (target && target.fileId !== fileId) {
+      void editorRef.current?.flushSaveTo(target.group, target.fileId);
+      setIsEditView(false);
+    }
+  }, [fileId]);
+
+  useEffect(() => {
+    editTargetRef.current = isEditView ? { group: activeGroup, fileId } : null;
+  }, [isEditView, activeGroup, fileId]);
+
   if (fileId !== prevFetchKey.fileId) {
     setPrevFetchKey({ fileId, revision });
     setLoading(true);
-    if (isEditView) setIsEditView(false);
   } else if (revision !== prevFetchKey.revision && !isEditView) {
     setPrevFetchKey({ fileId, revision });
     setLoading(true);
@@ -983,7 +998,7 @@ export function MarkdownViewer({
 
   /** Build anchor from editor cursor line (Edit → View). */
   const anchorFromEditor = useCallback((): ScrollAnchor | null => {
-    const cursorLine = vimEditorRef.current?.getCursorLine();
+    const cursorLine = editorRef.current?.getCursorLine();
     if (cursorLine == null) return null;
     return anchorFromSourceLine(content, cursorLine);
   }, [content]);
@@ -1019,31 +1034,21 @@ export function MarkdownViewer({
     return Math.floor(ratio * content.split("\n").length);
   }, [content, scrollContainer]);
 
-  const handleToggleEdit = useCallback(() => {
-    setIsEditView((v) => {
-      if (v) {
-        // Edit → View
-        setEditAnchor(anchorFromEditor());
-      }
-      if (!v) {
-        // View → Edit
-        setIsRawView(false);
-        const anchor = anchorFromView();
-        setEditAnchor(anchor ?? { text: "", occurrence: 0, line: estimateLineFromScroll() ?? 0 });
-      }
-      return !v;
-    });
-  }, [anchorFromEditor, anchorFromView, estimateLineFromScroll]);
-
-  const handleQuitEditor = useCallback(
-    (cursorLine?: number) => {
+  const handleToggleEdit = useCallback(async () => {
+    if (isEditView) {
+      // Edit → View. flushSave first so unsaved typing is not lost when the
+      // editor unmounts. Failures match autoSave's silent-failure UX.
+      await editorRef.current?.flushSave();
+      setEditAnchor(anchorFromEditor());
       setIsEditView(false);
-      if (cursorLine != null) {
-        setEditAnchor(anchorFromSourceLine(content, cursorLine));
-      }
-    },
-    [content],
-  );
+      return;
+    }
+    // View → Edit
+    setIsRawView(false);
+    const anchor = anchorFromView();
+    setEditAnchor(anchor ?? { text: "", occurrence: 0, line: estimateLineFromScroll() ?? 0 });
+    setIsEditView(true);
+  }, [isEditView, anchorFromEditor, anchorFromView, estimateLineFromScroll]);
 
   const handleToggleRaw = useCallback(() => {
     if (isEditView) setIsEditView(false);
@@ -1071,16 +1076,14 @@ export function MarkdownViewer({
   if (isEditView) {
     return (
       <div className="relative h-full">
-        <VimEditor
-          ref={vimEditorRef}
+        <Editor
+          ref={editorRef}
           content={content}
           activeGroup={activeGroup}
           fileId={fileId}
-          onQuit={handleQuitEditor}
           lineWrapping={editorLineWrapping}
           autoSave={editorAutoSave}
           colorScheme={editorColorScheme}
-          blockCursor={editorBlockCursor}
           initialLine={editAnchor?.line}
         />
         <div className="absolute top-4 right-4 z-10">

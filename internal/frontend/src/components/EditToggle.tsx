@@ -11,7 +11,7 @@ export function EditToggle({ isEditing, onToggle }: EditToggleProps) {
       onClick={onToggle}
       aria-label="Edit mode"
       aria-pressed={isEditing}
-      title={isEditing ? "Exit editor" : "Edit with Vim"}
+      title={isEditing ? "Exit editor" : "Edit"}
     >
       {isEditing ? (
         <svg
