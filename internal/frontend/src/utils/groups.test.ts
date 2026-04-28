@@ -5,8 +5,6 @@ import {
   groupToPath,
   buildFileUrl,
   parseFileIdFromSearch,
-  parseHomePathFromPath,
-  toHomePathUrl,
 } from "./groups";
 import type { Group } from "../hooks/useApi";
 
@@ -118,50 +116,5 @@ describe("parseFileIdFromSearch", () => {
 
   it("returns null for empty value", () => {
     expect(parseFileIdFromSearch("?file=")).toBeNull();
-  });
-});
-
-describe("toHomePathUrl", () => {
-  it("returns null when homeDir or absPath is empty", () => {
-    expect(toHomePathUrl("", "/Users/x")).toBeNull();
-    expect(toHomePathUrl("/Users/x/a.md", "")).toBeNull();
-  });
-
-  it("returns null when absPath is outside homeDir", () => {
-    expect(toHomePathUrl("/etc/passwd", "/Users/x")).toBeNull();
-    expect(toHomePathUrl("/Users/xyz/a.md", "/Users/x")).toBeNull();
-  });
-
-  it("builds /~/<rel> for files under homeDir", () => {
-    expect(toHomePathUrl("/Users/x/a.md", "/Users/x")).toBe("/~/a.md");
-    expect(toHomePathUrl("/Users/x/src/foo.md", "/Users/x")).toBe("/~/src/foo.md");
-  });
-
-  it("handles trailing-slash homeDir", () => {
-    expect(toHomePathUrl("/Users/x/a.md", "/Users/x/")).toBe("/~/a.md");
-  });
-
-  it("handles absPath equal to homeDir", () => {
-    expect(toHomePathUrl("/Users/x", "/Users/x")).toBe("/~/");
-  });
-});
-
-describe("parseHomePathFromPath", () => {
-  it("returns null for non-tilde paths", () => {
-    expect(parseHomePathFromPath("/")).toBeNull();
-    expect(parseHomePathFromPath("/design")).toBeNull();
-    expect(parseHomePathFromPath("/~foo")).toBeNull();
-  });
-
-  it("returns null for bare /~/", () => {
-    expect(parseHomePathFromPath("/~/")).toBeNull();
-  });
-
-  it("extracts the home-relative path", () => {
-    expect(parseHomePathFromPath("/~/foo")).toBe("foo");
-    expect(parseHomePathFromPath("/~/a/b.md")).toBe("a/b.md");
-    expect(parseHomePathFromPath("/~/src/github.com/x/y/README.md")).toBe(
-      "src/github.com/x/y/README.md",
-    );
   });
 });

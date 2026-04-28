@@ -16,22 +16,8 @@ import { useFileDrop } from "./hooks/useFileDrop";
 import { useActiveHeading } from "./hooks/useActiveHeading";
 import { useScrollRestoration, SCROLL_SESSION_KEY } from "./hooks/useScrollRestoration";
 import type { FileEntry, Group, SearchResult } from "./hooks/useApi";
-import {
-  fetchConfig,
-  fetchGroups,
-  fetchSearchResults,
-  removeFile,
-  reorderFiles,
-  resolveHomeFile,
-} from "./hooks/useApi";
-import {
-  allFileIds,
-  parseGroupFromPath,
-  parseFileIdFromSearch,
-  parseHomePathFromPath,
-  groupToPath,
-  toHomePathUrl,
-} from "./utils/groups";
+import { fetchGroups, fetchSearchResults, removeFile, reorderFiles } from "./hooks/useApi";
+import { allFileIds, parseGroupFromPath, parseFileIdFromSearch, groupToPath } from "./utils/groups";
 import { isMarkdownFile } from "./utils/filetype";
 
 const VIEWMODE_STORAGE_KEY = "mo-sidebar-viewmode";
@@ -72,13 +58,9 @@ export function isTocOpenForFile(
 
 export function App() {
   const [groups, setGroups] = useState<Group[]>([]);
-  const [activeGroup, setActiveGroup] = useState<string>(() => {
-    // When the URL uses the /~/ home-path scheme, the pathname is not a group
-    // name. Start with "default" and let the resolve effect below overwrite
-    // activeGroup once we know which group the file belongs to.
-    if (parseHomePathFromPath(window.location.pathname)) return "default";
-    return parseGroupFromPath(window.location.pathname) || "default";
-  });
+  const [activeGroup, setActiveGroup] = useState<string>(
+    () => parseGroupFromPath(window.location.pathname) || "default",
+  );
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tocOpenMap, setTocOpenMap] = useState<Record<string, boolean>>(getInitialTocOpenMap);
@@ -211,82 +193,13 @@ export function App() {
       .catch(() => {});
   }, []);
 
-  // Resolve /~/ URLs on mount. While this is pending, we must not let the
-  // "sync URL with active group" effect rewrite the pathname, or the home
-  // path gets wiped before we can read it on the server.
-  const pendingHomePathRef = useRef<string | null>(parseHomePathFromPath(window.location.pathname));
-
-  // $HOME value from the server, used to turn absolute file paths into the
-  // "/~/<rel>" permalink form as the user navigates between files. null means
-  // "not fetched yet"; empty string means the feature is disabled (remote
-  // access mode or the server could not resolve $HOME).
-  const [homeDir, setHomeDir] = useState<string | null>(null);
+  // Sync URL path with active group
   useEffect(() => {
-    fetchConfig()
-      .then((cfg) => setHomeDir(cfg.homeDir))
-      .catch(() => setHomeDir(""));
-  }, []);
-
-  useEffect(() => {
-    const relPath = pendingHomePathRef.current;
-    if (!relPath) return;
-    resolveHomeFile(relPath)
-      .then((result) => {
-        pendingHomePathRef.current = null;
-        if (result) {
-          // Use activeFileId directly rather than initialFileId: the
-          // render-time adjust block only consumes initialFileId when
-          // groups or activeGroup change, so if fetchGroups has already
-          // committed by the time resolve completes, initialFileId would
-          // be stuck unconsumed and the wrong file would stay selected.
-          setActiveGroup(result.group);
-          setActiveFileId(result.id);
-        } else {
-          // Preserve the typed URL so the user can see what they tried to
-          // open. The default view renders behind it.
-          console.warn(`mo: no registered file for ~/${relPath}`);
-        }
-      })
-      .catch((err) => {
-        pendingHomePathRef.current = null;
-        console.warn("mo: failed to resolve home path", err);
-      });
-  }, []);
-
-  // Sync URL path with active group. Preserve /~/ URLs: the user typed
-  // them deliberately and the group name is a derived detail, so
-  // rewriting the address bar would be surprising. They remain until
-  // the user navigates away explicitly (e.g., via the group dropdown,
-  // which calls pushState with the group path).
-  useEffect(() => {
-    if (pendingHomePathRef.current) return;
-    if (window.location.pathname.startsWith("/~/")) return;
     const expectedPath = groupToPath(activeGroup);
     if (window.location.pathname !== expectedPath) {
       window.history.replaceState(null, "", expectedPath);
     }
   }, [activeGroup]);
-
-  // While in /~/ permalink mode, keep the URL pointing at the currently
-  // selected file so the address bar works as a shareable deep link. Only
-  // runs after the initial resolve has finished (pendingHomePathRef null)
-  // and the server has told us what $HOME is. Files outside $HOME have no
-  // /~/ representation, so we leave the URL untouched for those.
-  useEffect(() => {
-    if (pendingHomePathRef.current) return;
-    if (!homeDir) return;
-    if (!window.location.pathname.startsWith("/~/")) return;
-    if (!activeFileId) return;
-    const file = groups
-      .find((g) => g.name === activeGroup)
-      ?.files.find((f) => f.id === activeFileId);
-    if (!file?.path) return;
-    const next = toHomePathUrl(file.path, homeDir);
-    if (!next) return;
-    if (window.location.pathname !== next) {
-      window.history.replaceState(null, "", next);
-    }
-  }, [activeFileId, activeGroup, groups, homeDir]);
 
   // Clear search params after consuming initial file ID
   useEffect(() => {
@@ -468,15 +381,12 @@ export function App() {
     activeFileId,
   );
 
-  const handleHeadingClick = useCallback(
-    (id: string) => {
-      const el = document.getElementById(id);
-      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const behavior = settings.smoothScroll && !reduced ? "smooth" : "auto";
-      el?.scrollIntoView({ behavior, block: "start" });
-    },
-    [settings.smoothScroll],
-  );
+  const handleHeadingClick = useCallback((id: string) => {
+    const el = document.getElementById(id);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const behavior = settings.smoothScroll && !reduced ? "smooth" : "auto";
+    el?.scrollIntoView({ behavior, block: "start" });
+  }, [settings.smoothScroll]);
 
   const handleZoom = useCallback((content: ZoomContent) => {
     setZoomContent(content);
@@ -550,7 +460,10 @@ export function App() {
         {sidebarOpen && (
           <>
             {settings.sidebarOverlay && (
-              <div className="absolute inset-0 z-20" onClick={() => setSidebarOpen(false)} />
+              <div
+                className="absolute inset-0 z-20"
+                onClick={() => setSidebarOpen(false)}
+              />
             )}
             <Sidebar
               groups={groups}
@@ -611,7 +524,10 @@ export function App() {
           </div>
           {tocOpen && settings.tocFloating && (
             <>
-              <div className="absolute inset-0 z-20" onClick={() => setTocOpen(false)} />
+              <div
+                className="absolute inset-0 z-20"
+                onClick={() => setTocOpen(false)}
+              />
               <TocPanel
                 headings={headings}
                 activeHeadingId={activeHeadingId}
