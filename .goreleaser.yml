@@ -70,7 +70,7 @@ nfpms:
     file_name_template: "{{ .ProjectName }}_{{ .Version }}-1_{{ .Arch }}"
     ids:
       - mo-linux
-    homepage: https://github.com/k1LoW/mo
+    homepage: https://github.com/babarot/mo
     maintainer: Ken'ichiro Oyama <k1lowxb@gmail.com>
     description: "mo is a Markdown viewer that opens .md files in a browser"
     license: MIT
@@ -81,4 +81,17 @@ nfpms:
     bindir: /usr/bin
     epoch: 1
 release:
-  use_existing_draft: true
+  footer: >-
+
+    ---
+    Fork of [k1LoW/mo](https://github.com/k1LoW/mo) with personal changes.
+
+nix:
+  - repository:
+      owner: babarot
+      name: nur-packages
+      token: "{{ .Env.NUR_GITHUB_TOKEN }}"
+    homepage: https://github.com/babarot/mo
+    description: Markdown viewer that opens .md files in a browser (babarot's fork)
+    license: mit
+    main_program: mo

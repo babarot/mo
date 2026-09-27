@@ -3,7 +3,7 @@ name: tagpr
 on:
   push:
     branches:
-      - main
+      - babarot/main
   workflow_dispatch:
 
 jobs:
@@ -62,6 +62,10 @@ jobs:
         with:
           package_json_file: internal/frontend/package.json
 
+      - name: Install Nix
+        # GoReleaser needs nix-hash to publish to babarot/nur-packages
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # v7.0.0
         with:
@@ -70,3 +74,4 @@ jobs:
           args: --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUR_GITHUB_TOKEN: ${{ secrets.NUR_GITHUB_TOKEN }}
