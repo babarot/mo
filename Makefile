@@ -11,7 +11,7 @@ generate:
 	go generate ./internal/static/
 
 test:
-	cd internal/frontend && pnpm install && pnpm run test:coverage
+	cd internal/frontend && pnpm install --frozen-lockfile && pnpm run test:coverage
 	go test ./... -coverprofile=coverage.out -covermode=count -count=1
 
 build: generate
@@ -27,15 +27,15 @@ screenshot: build
 	cd internal/frontend && pnpm run screenshots
 
 lint:
-	cd internal/frontend && pnpm install && pnpm run fmt:check && pnpm run lint
+	cd internal/frontend && pnpm install --frozen-lockfile && pnpm run fmt:check && pnpm run lint
 	golangci-lint run ./...
 	go vet -vettool=`which gostyle` -gostyle.config=$(PWD)/.gostyle.yml ./...
 
 fmt:
-	cd internal/frontend && pnpm install && pnpm run fmt
+	cd internal/frontend && pnpm install --frozen-lockfile && pnpm run fmt
 
 fmt-check:
-	cd internal/frontend && pnpm install && pnpm run fmt:check
+	cd internal/frontend && pnpm install --frozen-lockfile && pnpm run fmt:check
 
 depsdev:
 	go install github.com/Songmu/gocredits/cmd/gocredits@latest
