@@ -1,5 +1,10 @@
 # Changelog
 
+## [v1.4.0](https://github.com/babarot/mo/compare/v0.13.1...v1.4.0) - 2026-09-27
+### Other Changes
+- ci: release the fork from babarot/main and publish to nur-packages by @babarot in https://github.com/babarot/mo/pull/1
+- build: install frontend deps with --frozen-lockfile by @babarot in https://github.com/babarot/mo/pull/3
+
 ## [v1.4.0](https://github.com/k1LoW/mo/compare/v1.3.0...v1.4.0) - 2026-04-22
 ### Breaking Changes 🛠
 - feat: add --recursive (-R) flag and reshape --watch as a boolean toggle by @kechol in https://github.com/k1LoW/mo/pull/184
