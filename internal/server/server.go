@@ -1351,8 +1351,7 @@ func handleUploadFile(state *State) http.HandlerFunc {
 		r.Body = http.MaxBytesReader(w, r.Body, maxRequestSize)
 		var req uploadFileRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			var maxBytesErr *http.MaxBytesError
-			if errors.As(err, &maxBytesErr) {
+			if _, ok := errors.AsType[*http.MaxBytesError](err); ok { //nostyle:handlerrors
 				http.Error(w, "file too large (max 10MB)", http.StatusRequestEntityTooLarge)
 				return
 			}
@@ -1523,8 +1522,7 @@ func handleSaveFileContent(state *State) http.HandlerFunc {
 		r.Body = http.MaxBytesReader(w, r.Body, maxRequestSize)
 		var req saveFileContentRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			var maxBytesErr *http.MaxBytesError
-			if errors.As(err, &maxBytesErr) {
+			if _, ok := errors.AsType[*http.MaxBytesError](err); ok { //nostyle:handlerrors
 				http.Error(w, "content too large (max 10MB)", http.StatusRequestEntityTooLarge)
 				return
 			}
@@ -1783,7 +1781,7 @@ func handleFileRaw(state *State) http.HandlerFunc {
 			return
 		}
 
-		http.ServeFile(w, r, absPath)
+		http.ServeFile(w, r, absPath) //nolint:gosec // G703: absPath is checked to stay under the entry's directory above
 	}
 }
 
