@@ -1,5 +1,9 @@
 # Changelog
 
+## [v1.4.1](https://github.com/babarot/mo/compare/v1.4.0...v1.4.1) - 2026-09-27
+### Other Changes
+- fix: resolve golangci-lint errors reported on push to babarot/main by @babarot in https://github.com/babarot/mo/pull/5
+
 ## [v1.4.0](https://github.com/babarot/mo/compare/v0.13.1...v1.4.0) - 2026-09-27
 ### Other Changes
 - ci: release the fork from babarot/main and publish to nur-packages by @babarot in https://github.com/babarot/mo/pull/1
