@@ -1,7 +1,7 @@
 [tagpr]
 	vPrefix = true
-	releaseBranch = main
-	release = draft
+	releaseBranch = babarot/main
+	release = false
 	versionFile = version/version.go
 	command = "make prerelease_for_tagpr"
 	majorLabels = "tagpr:major"
