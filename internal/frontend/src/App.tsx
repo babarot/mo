@@ -134,7 +134,9 @@ export function App() {
 
     // Active file selection and sidebar auto open/close
     const group = groups.find((g) => g.name === activeGroup);
-    setSidebarOpen(group != null && group.files.length >= 2);
+    if (!settings.sidebarOverlay) {
+      setSidebarOpen(group != null && group.files.length >= 2);
+    }
 
     if (groups.length === 0) {
       setActiveFileId(null);
@@ -384,8 +386,9 @@ export function App() {
     (fileId: string) => {
       window.history.pushState(null, "", buildFileUrl(activeGroup, fileId));
       setActiveFileId(fileId);
+      if (settings.sidebarOverlay) setSidebarOpen(false);
     },
-    [activeGroup],
+    [activeGroup, settings.sidebarOverlay],
   );
 
   const handleFileOpened = useCallback(
@@ -511,25 +514,31 @@ export function App() {
           </button>
         </div>
       </header>
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {sidebarOpen && (
-          <Sidebar
-            groups={groups}
-            activeGroup={activeGroup}
-            activeFileId={activeFileId}
-            onFileSelect={handleFileSelect}
-            onFilesReorder={handleFilesReorder}
-            viewMode={currentViewMode}
-            showTitle={currentShowTitle}
-            onViewModeToggle={handleViewModeToggle}
-            onTitleToggle={handleTitleToggle}
-            searchQuery={searchQuery}
-            onSearchQueryChange={setSearchQuery}
-            onSearchToggle={handleSearchToggle}
-            searchResults={searchResults}
-            searchLoading={searchLoading}
-            onSearchResultSelect={handleSearchResultSelect}
-          />
+          <>
+            {settings.sidebarOverlay && (
+              <div className="absolute inset-0 z-20" onClick={() => setSidebarOpen(false)} />
+            )}
+            <Sidebar
+              groups={groups}
+              activeGroup={activeGroup}
+              activeFileId={activeFileId}
+              onFileSelect={handleFileSelect}
+              onFilesReorder={handleFilesReorder}
+              viewMode={currentViewMode}
+              showTitle={currentShowTitle}
+              onViewModeToggle={handleViewModeToggle}
+              onTitleToggle={handleTitleToggle}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              onSearchToggle={handleSearchToggle}
+              searchResults={searchResults}
+              searchLoading={searchLoading}
+              onSearchResultSelect={handleSearchResultSelect}
+              overlay={settings.sidebarOverlay}
+            />
+          </>
         )}
         <main className="flex-1 flex flex-col overflow-hidden">
           <div

@@ -2,6 +2,7 @@ export interface Settings {
   theme: "auto" | "dark" | "light";
   fontSize: "small" | "medium" | "large" | "xlarge";
   wide: boolean;
+  sidebarOverlay: boolean;
 }
 
 const STORAGE_KEY = "mo-settings";
@@ -10,6 +11,7 @@ const defaults: Settings = {
   theme: "auto",
   fontSize: "medium",
   wide: false,
+  sidebarOverlay: false,
 };
 
 export function loadSettings(): Settings {
