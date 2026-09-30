@@ -3,6 +3,7 @@ export interface Settings {
   fontSize: "small" | "medium" | "large" | "xlarge";
   wide: boolean;
   sidebarOverlay: boolean;
+  tocFloating: boolean;
 }
 
 const STORAGE_KEY = "mo-settings";
@@ -12,6 +13,7 @@ const defaults: Settings = {
   fontSize: "medium",
   wide: false,
   sidebarOverlay: false,
+  tocFloating: false,
 };
 
 export function loadSettings(): Settings {

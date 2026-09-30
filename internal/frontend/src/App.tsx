@@ -540,7 +540,7 @@ export function App() {
             />
           </>
         )}
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 flex flex-col overflow-hidden relative">
           <div
             ref={setScrollContainer}
             className="flex-1 overflow-y-auto overscroll-contain p-8 bg-gh-bg"
@@ -572,8 +572,19 @@ export function App() {
               <EmptyGroupMessage group={activeGroupData} />
             )}
           </div>
+          {tocOpen && settings.tocFloating && (
+            <>
+              <div className="absolute inset-0 z-20" onClick={() => setTocOpen(false)} />
+              <TocPanel
+                headings={headings}
+                activeHeadingId={activeHeadingId}
+                onHeadingClick={handleHeadingClick}
+                floating
+              />
+            </>
+          )}
         </main>
-        {tocOpen && (
+        {tocOpen && !settings.tocFloating && (
           <TocPanel
             headings={headings}
             activeHeadingId={activeHeadingId}
