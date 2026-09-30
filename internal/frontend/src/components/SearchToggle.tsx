@@ -8,7 +8,7 @@ export function SearchToggle({ isOpen, onToggle }: SearchToggleProps) {
     <button
       type="button"
       className={`flex items-center justify-center bg-transparent border border-gh-border rounded-md p-1.5 cursor-pointer transition-colors duration-150 hover:bg-gh-bg-hover ${
-        isOpen ? "text-gh-header-text bg-gh-bg-hover" : "text-gh-header-text"
+        isOpen ? "text-gh-text bg-gh-bg-hover" : "text-gh-text-secondary"
       }`}
       onClick={onToggle}
       aria-label="Search"

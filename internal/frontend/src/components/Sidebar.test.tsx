@@ -59,6 +59,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery={null}
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
     expect(screen.getByText("README.md")).toBeInTheDocument();
@@ -78,6 +81,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery={null}
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
     expect(screen.getByText("api.md")).toBeInTheDocument();
@@ -96,6 +102,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery={null}
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
     const activeLink = screen.getByText("README.md").closest("a")!;
@@ -121,6 +130,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery={null}
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
 
@@ -140,6 +152,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery={null}
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
     expect(screen.getByText("README.md").closest("a")?.getAttribute("href")).toBe(
@@ -162,6 +177,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery={null}
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
 
@@ -183,6 +201,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery={null}
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
     expect(screen.getByTitle("/README.md")).toBeInTheDocument();
@@ -202,9 +223,12 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery={null}
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByText("README.md")).not.toBeInTheDocument();
   });
 
   it("shows search input when searchQuery is non-null", () => {
@@ -219,6 +243,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery=""
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
     expect(screen.getByPlaceholderText("Search files...")).toBeInTheDocument();
@@ -236,6 +263,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery={null}
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
     expect(screen.queryByPlaceholderText("Search files...")).not.toBeInTheDocument();
@@ -253,6 +283,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery="read"
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
     expect(screen.getByText("README.md")).toBeInTheDocument();
@@ -273,6 +306,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery=""
         onSearchQueryChange={onSearchQueryChange}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
     const input = screen.getByPlaceholderText("Search files...");
@@ -293,6 +329,9 @@ describe("Sidebar", () => {
         showTitle={true}
         searchQuery={null}
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
     expect(screen.getByText("Getting Started")).toBeInTheDocument();
@@ -312,6 +351,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery={null}
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
     expect(screen.getByText("README.md")).toBeInTheDocument();
@@ -330,6 +372,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery="getting"
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
       />,
     );
     expect(screen.getByText("README.md")).toBeInTheDocument();
@@ -348,6 +393,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery="cache"
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
         searchResults={searchResults}
       />,
     );
@@ -369,6 +417,9 @@ describe("Sidebar", () => {
         showTitle={false}
         searchQuery="cache"
         onSearchQueryChange={() => {}}
+        onViewModeToggle={() => {}}
+        onTitleToggle={() => {}}
+        onSearchToggle={() => {}}
         searchResults={searchResults}
       />,
     );
