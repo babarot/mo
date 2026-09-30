@@ -96,6 +96,12 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
             checked={settings.tocFloating}
             onChange={(v) => update({ tocFloating: v })}
           />
+          <Toggle
+            label="Smooth scroll"
+            description="Animate scroll when navigating to headings"
+            checked={settings.smoothScroll}
+            onChange={(v) => update({ smoothScroll: v })}
+          />
         </Section>
       </div>
     </div>

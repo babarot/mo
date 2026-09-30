@@ -4,6 +4,7 @@ export interface Settings {
   wide: boolean;
   sidebarOverlay: boolean;
   tocFloating: boolean;
+  smoothScroll: boolean;
 }
 
 const STORAGE_KEY = "mo-settings";
@@ -14,6 +15,7 @@ const defaults: Settings = {
   wide: false,
   sidebarOverlay: false,
   tocFloating: false,
+  smoothScroll: true,
 };
 
 export function loadSettings(): Settings {

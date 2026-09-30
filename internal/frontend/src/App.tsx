@@ -440,11 +440,15 @@ export function App() {
     activeFileId,
   );
 
-  const handleHeadingClick = useCallback((id: string) => {
-    const el = document.getElementById(id);
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
-  }, []);
+  const handleHeadingClick = useCallback(
+    (id: string) => {
+      const el = document.getElementById(id);
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const behavior = settings.smoothScroll && !reduced ? "smooth" : "auto";
+      el?.scrollIntoView({ behavior, block: "start" });
+    },
+    [settings.smoothScroll],
+  );
 
   const handleZoom = useCallback((content: ZoomContent) => {
     setZoomContent(content);
