@@ -33,6 +33,8 @@ describe("loadSettings", () => {
     expect(s.theme).toBe("auto");
     expect(s.fontSize).toBe("medium");
     expect(s.wide).toBe(false);
+    expect(s.editorLineWrapping).toBe(true);
+    expect(s.editorAutoSave).toBe(false);
   });
 
   it("returns stored settings", () => {

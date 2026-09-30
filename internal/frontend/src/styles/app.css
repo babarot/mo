@@ -215,6 +215,12 @@ body,
   color: var(--fgColor-danger);
 }
 
+/* CodeMirror editor */
+.mo-editor .cm-editor {
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
+  font-size: 14px;
+}
+
 [data-theme="dark"] .markdown-body {
   --fgColor-accent: #4493f8;
   --fgColor-danger: #f85149;

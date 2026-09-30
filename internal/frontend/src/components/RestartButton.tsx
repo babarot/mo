@@ -3,7 +3,7 @@ import { restartServer, fetchVersion, type VersionInfo } from "../hooks/useApi";
 
 type Status = "idle" | "restarting";
 
-export function RestartButton() {
+export function RestartButton({ isEditing = false }: { isEditing?: boolean }) {
   const [status, setStatus] = useState<Status>("idle");
   const [version, setVersion] = useState<VersionInfo | null>(null);
 
@@ -44,7 +44,7 @@ export function RestartButton() {
   return (
     <>
       <button
-        className="fixed bottom-4 right-4 flex items-center justify-center bg-transparent border border-gh-border rounded-md p-1.5 text-gh-text-secondary cursor-pointer transition-colors duration-150 hover:bg-gh-bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
+        className={`fixed right-4 flex items-center justify-center bg-transparent border border-gh-border rounded-md p-1.5 text-gh-text-secondary cursor-pointer transition-colors duration-150 hover:bg-gh-bg-hover disabled:opacity-50 disabled:cursor-not-allowed ${isEditing ? "bottom-10" : "bottom-4"}`}
         onClick={handleClick}
         disabled={status === "restarting"}
         title={title}

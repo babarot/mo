@@ -1,4 +1,6 @@
 import type { Settings } from "../lib/settings";
+import { getEffectiveTheme } from "../lib/settings";
+import { EDITOR_COLOR_SCHEMES } from "../lib/editorThemes";
 
 interface SettingsDialogProps {
   settings: Settings;
@@ -101,6 +103,70 @@ export function SettingsDialog({ settings, onChange, onClose }: SettingsDialogPr
             description="Animate scroll when navigating to headings"
             checked={settings.smoothScroll}
             onChange={(v) => update({ smoothScroll: v })}
+          />
+        </Section>
+
+        {/* Editor */}
+        <Section title="Editor">
+          {/* Color Scheme */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gh-text mb-2">Color scheme</label>
+            <div className="grid grid-cols-4 gap-2">
+              {EDITOR_COLOR_SCHEMES.map((scheme) => {
+                const mode = getEffectiveTheme(settings.theme);
+                const colors = scheme[mode];
+                const isActive = settings.editorColorScheme === scheme.name;
+                return (
+                  <button
+                    key={scheme.name}
+                    className={`rounded-md border p-2 cursor-pointer transition-all ${
+                      isActive
+                        ? "border-blue-500 ring-1 ring-blue-500"
+                        : "border-gh-border hover:border-gh-text-secondary"
+                    }`}
+                    onClick={() => update({ editorColorScheme: scheme.name })}
+                  >
+                    <div
+                      className="rounded h-7 mb-1 flex items-center gap-0.5 px-1.5 overflow-hidden"
+                      style={{ background: colors.bg }}
+                    >
+                      <div
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: colors.cursor }}
+                      />
+                      <div
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: colors.text }}
+                      />
+                      <div
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: colors.gutterText }}
+                      />
+                      <div
+                        className="flex-1 h-0.5 rounded ml-0.5"
+                        style={{ background: colors.activeLineBg }}
+                      />
+                    </div>
+                    <div className="text-[11px] text-center truncate text-gh-text-secondary">
+                      {scheme.label}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <Toggle
+            label="Line wrapping"
+            description="Wrap long lines at the editor edge"
+            checked={settings.editorLineWrapping}
+            onChange={(v) => update({ editorLineWrapping: v })}
+          />
+          <Toggle
+            label="Auto save"
+            description="Automatically save after 1 second of inactivity"
+            checked={settings.editorAutoSave}
+            onChange={(v) => update({ editorAutoSave: v })}
           />
         </Section>
       </div>

@@ -14,6 +14,8 @@ import { fetchFileContent, openRelativeFile } from "../hooks/useApi";
 import { isPlainLeftClick } from "../utils/linkClick";
 import { escapeRegExp } from "../utils/regex";
 import { RawToggle } from "./RawToggle";
+import { EditToggle } from "./EditToggle";
+import { Editor, type EditorHandle } from "./Editor";
 import { TocToggle } from "./TocToggle";
 import { CopyButton } from "./CopyButton";
 import { CloseFileButton } from "./CloseFileButton";
@@ -99,11 +101,86 @@ interface MarkdownViewerProps {
   scrollToHeading?: string | null;
   onScrolledToHeading?: () => void;
   searchQuery?: string | null;
+  editorLineWrapping?: boolean;
+  editorAutoSave?: boolean;
+  editorColorScheme?: string;
+  onEditStateChange?: (editing: boolean) => void;
 }
 
 interface SearchHitMarker {
   top: number;
   height: number;
+}
+
+/** Anchor for syncing scroll position between view and edit modes. */
+interface ScrollAnchor {
+  text: string;
+  occurrence: number;
+  line: number;
+}
+
+/** Strip inline Markdown formatting to get plain text for heading comparison. */
+function stripInlineMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "$1") // bold
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/\*(.+?)\*/g, "$1") // italic
+    .replace(/_(.+?)_/g, "$1")
+    .replace(/~~(.+?)~~/g, "$1") // strikethrough
+    .replace(/`(.+?)`/g, "$1") // inline code
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1") // links
+    .replace(/\s+#+\s*$/, "") // trailing hashes
+    .trim();
+}
+
+/** Find a heading anchor in the source by text and occurrence index. */
+function findHeadingLine(
+  content: string,
+  headingText: string,
+  occurrenceIndex: number,
+): number | undefined {
+  const lines = content.split("\n");
+  let seen = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^#{1,6}\s+(.*)/);
+    if (m && stripInlineMarkdown(m[1]) === headingText) {
+      if (seen === occurrenceIndex) return i;
+      seen++;
+    }
+  }
+  return undefined;
+}
+
+/** Build a ScrollAnchor from a source line by searching upward for the nearest heading. */
+function anchorFromSourceLine(content: string, cursorLine: number): ScrollAnchor | null {
+  const lines = content.split("\n");
+  for (let i = Math.min(cursorLine, lines.length - 1); i >= 0; i--) {
+    const m = lines[i].match(/^#{1,6}\s+(.*)/);
+    if (m) {
+      const text = stripInlineMarkdown(m[1]);
+      // Count occurrence of this heading text up to line i
+      let occurrence = 0;
+      for (let j = 0; j < i; j++) {
+        const m2 = lines[j].match(/^#{1,6}\s+(.*)/);
+        if (m2 && stripInlineMarkdown(m2[1]) === text) occurrence++;
+      }
+      return { text, occurrence, line: i };
+    }
+  }
+  return null;
+}
+
+/** Find the DOM heading element matching a ScrollAnchor. */
+function findDomHeading(container: HTMLElement, anchor: ScrollAnchor): Element | null {
+  const headingEls = container.querySelectorAll("h1, h2, h3, h4, h5, h6");
+  let seen = 0;
+  for (const el of headingEls) {
+    if ((el.textContent ?? "").trim() === anchor.text) {
+      if (seen === anchor.occurrence) return el;
+      seen++;
+    }
+  }
+  return null;
 }
 
 const SEARCH_HIT_COLUMN_OFFSET = -24;
@@ -580,10 +657,21 @@ export function MarkdownViewer({
   scrollToHeading,
   onScrolledToHeading,
   searchQuery,
+  editorLineWrapping = true,
+  editorAutoSave = false,
+  editorColorScheme = "default",
+  onEditStateChange,
 }: MarkdownViewerProps) {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [isRawView, setIsRawView] = useState(false);
+  const [isEditView, setIsEditView] = useState(false);
+  useEffect(() => {
+    onEditStateChange?.(isEditView);
+  }, [isEditView, onEditStateChange]);
+  const [editAnchor, setEditAnchor] = useState<ScrollAnchor | null>(null);
+  const editorRef = useRef<EditorHandle>(null);
+  const editTargetRef = useRef<{ group: string; fileId: string } | null>(null);
   const [searchHitMarkers, setSearchHitMarkers] = useState<SearchHitMarker[]>([]);
   // The sticky bar shows the file name only while the document's own title is on
   // screen (so it never duplicates it), then folds the title into the label once
@@ -593,12 +681,38 @@ export function MarkdownViewer({
   const stickyLabelRef = useRef<HTMLDivElement>(null);
   const [prevFetchKey, setPrevFetchKey] = useState({ fileId, revision });
 
-  if (fileId !== prevFetchKey.fileId || revision !== prevFetchKey.revision) {
+  // Detect file switches that happen while the editor is open. Saving has to
+  // run from an effect (not the render-phase prevFetchKey block below) so it
+  // does not get duplicated under StrictMode's double-invocation. The next
+  // effect updates editTargetRef AFTER this one fires so we read the OLD
+  // target here before it gets overwritten.
+  useEffect(() => {
+    const target = editTargetRef.current;
+    if (target && target.fileId !== fileId) {
+      void editorRef.current?.flushSaveTo(target.group, target.fileId);
+      setIsEditView(false);
+    }
+  }, [fileId]);
+
+  useEffect(() => {
+    editTargetRef.current = isEditView ? { group: activeGroup, fileId } : null;
+  }, [isEditView, activeGroup, fileId]);
+
+  if (fileId !== prevFetchKey.fileId) {
     setPrevFetchKey({ fileId, revision });
     setLoading(true);
+  } else if (revision !== prevFetchKey.revision && !isEditView) {
+    setPrevFetchKey({ fileId, revision });
+    setLoading(true);
+  } else if (revision !== prevFetchKey.revision) {
+    // In edit mode, just update the key without triggering loading
+    setPrevFetchKey({ fileId, revision });
   }
 
   useEffect(() => {
+    // Skip re-fetching while in edit mode — the editor owns the content.
+    // When exiting edit mode, isEditView flips to false and triggers a re-fetch.
+    if (isEditView) return;
     let cancelled = false;
     fetchFileContent(activeGroup, fileId)
       .then((data) => {
@@ -616,7 +730,7 @@ export function MarkdownViewer({
     return () => {
       cancelled = true;
     };
-  }, [activeGroup, fileId, revision]);
+  }, [activeGroup, fileId, revision, isEditView]);
 
   const handleLinkClick = useCallback(
     async (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -823,6 +937,16 @@ export function MarkdownViewer({
     }
   }, [loading, renderedContent, scrollToHeading, onScrolledToHeading]);
 
+  // Scroll to heading when returning from edit mode
+  useLayoutEffect(() => {
+    if (loading || isEditView || !editAnchor || !articleRef.current) return;
+    const target = findDomHeading(articleRef.current, editAnchor);
+    if (target) {
+      target.scrollIntoView({ behavior: "auto", block: "start" });
+    }
+    setEditAnchor(null);
+  }, [loading, isEditView, editAnchor, renderedContent]);
+
   useLayoutEffect(() => {
     if (loading || !articleRef.current || !isMarkdown || isRawView || !searchQuery?.trim()) {
       setSearchHitMarkers([]);
@@ -888,10 +1012,99 @@ export function MarkdownViewer({
     // isWide/fontSize/isTocOpen change the layout, so recompute on those too.
   }, [loading, renderedContent, scrollContainer, isWide, fontSize, isTocOpen]);
 
+  /** Build anchor from editor cursor line (Edit → View). */
+  const anchorFromEditor = useCallback((): ScrollAnchor | null => {
+    const cursorLine = editorRef.current?.getCursorLine();
+    if (cursorLine == null) return null;
+    return anchorFromSourceLine(content, cursorLine);
+  }, [content]);
+
+  /** Build anchor from current viewport position (View → Edit). */
+  const anchorFromView = useCallback((): ScrollAnchor | null => {
+    if (!articleRef.current) return null;
+    const headingEls = articleRef.current.querySelectorAll("h1, h2, h3, h4, h5, h6");
+    let nearest: Element | null = null;
+    for (const el of headingEls) {
+      if (el.getBoundingClientRect().top <= window.innerHeight / 3) {
+        nearest = el;
+      }
+    }
+    if (!nearest) return null;
+    const text = (nearest.textContent ?? "").trim();
+    let occurrence = 0;
+    for (const el of headingEls) {
+      if (el === nearest) break;
+      if ((el.textContent ?? "").trim() === text) occurrence++;
+    }
+    const line = findHeadingLine(content, text, occurrence);
+    if (line == null) return null;
+    return { text, occurrence, line };
+  }, [content]);
+
+  /** Estimate source line from scroll ratio (fallback when no heading available). */
+  const estimateLineFromScroll = useCallback((): number | undefined => {
+    if (!scrollContainer || scrollContainer.scrollHeight <= scrollContainer.clientHeight)
+      return undefined;
+    const ratio =
+      scrollContainer.scrollTop / (scrollContainer.scrollHeight - scrollContainer.clientHeight);
+    return Math.floor(ratio * content.split("\n").length);
+  }, [content, scrollContainer]);
+
+  const handleToggleEdit = useCallback(async () => {
+    if (isEditView) {
+      // Edit → View. flushSave first so unsaved typing is not lost when the
+      // editor unmounts. Failures match autoSave's silent-failure UX.
+      await editorRef.current?.flushSave();
+      setEditAnchor(anchorFromEditor());
+      setIsEditView(false);
+      return;
+    }
+    // View → Edit
+    setIsRawView(false);
+    const anchor = anchorFromView();
+    setEditAnchor(anchor ?? { text: "", occurrence: 0, line: estimateLineFromScroll() ?? 0 });
+    setIsEditView(true);
+  }, [isEditView, anchorFromEditor, anchorFromView, estimateLineFromScroll]);
+
+  const handleToggleRaw = useCallback(() => {
+    if (isEditView) setIsEditView(false);
+    setIsRawView((v) => !v);
+  }, [isEditView]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-50 text-gh-text-secondary text-sm">
         Loading...
+      </div>
+    );
+  }
+
+  const toolbarButtons = (
+    <div className="shrink-0 flex flex-col gap-2 -mr-4 -mt-4 sticky -top-4">
+      {isMarkdown && <EditToggle isEditing={isEditView} onToggle={handleToggleEdit} />}
+      {isMarkdown && <TocToggle isTocOpen={isTocOpen} onToggle={onTocToggle} />}
+      {isMarkdown && <RawToggle isRaw={isRawView} onToggle={handleToggleRaw} />}
+      <CopyButton content={content} />
+      <CloseFileButton onClose={onRemoveFile} uploaded={uploaded} />
+    </div>
+  );
+
+  if (isEditView) {
+    return (
+      <div className="relative h-full">
+        <Editor
+          ref={editorRef}
+          content={content}
+          activeGroup={activeGroup}
+          fileId={fileId}
+          lineWrapping={editorLineWrapping}
+          autoSave={editorAutoSave}
+          colorScheme={editorColorScheme}
+          initialLine={editAnchor?.line}
+        />
+        <div className="absolute top-4 right-4 z-10">
+          <EditToggle isEditing={isEditView} onToggle={handleToggleEdit} />
+        </div>
       </div>
     );
   }
@@ -930,12 +1143,7 @@ export function MarkdownViewer({
           {renderedContent}
         </article>
       </div>
-      <div className="shrink-0 flex flex-col gap-2 -mr-4 -mt-4 sticky -top-4">
-        {isMarkdown && <TocToggle isTocOpen={isTocOpen} onToggle={onTocToggle} />}
-        {isMarkdown && <RawToggle isRaw={isRawView} onToggle={() => setIsRawView((v) => !v)} />}
-        <CopyButton content={content} />
-        <CloseFileButton onClose={onRemoveFile} uploaded={uploaded} />
-      </div>
+      {toolbarButtons}
     </div>
   );
 }

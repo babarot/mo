@@ -5,6 +5,9 @@ export interface Settings {
   sidebarOverlay: boolean;
   tocFloating: boolean;
   smoothScroll: boolean;
+  editorLineWrapping: boolean;
+  editorAutoSave: boolean;
+  editorColorScheme: string;
 }
 
 const STORAGE_KEY = "mo-settings";
@@ -16,6 +19,9 @@ const defaults: Settings = {
   sidebarOverlay: false,
   tocFloating: false,
   smoothScroll: true,
+  editorLineWrapping: true,
+  editorAutoSave: false,
+  editorColorScheme: "default",
 };
 
 export function loadSettings(): Settings {
